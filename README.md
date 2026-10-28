@@ -84,6 +84,7 @@ Instala una versión optimizada, con el código empaquetado dentro de la app: no
 | Mapa en blanco o gris | Falta `GOOGLE_MAPS_API_KEY` o la key no tiene el paquete y SHA-1 correctos. |
 | "Ese correo o usuario ya está en uso" | El correo o el nombre de usuario ya existen; usa otros o inicia sesión. |
 | `adb devices` no muestra el teléfono | Cable de solo carga, depuración USB apagada o aviso de autorización sin aceptar en el teléfono. |
+| `SDK location not found` | Gradle no encuentra el Android SDK. Define `ANDROID_HOME` una vez (PowerShell: `[Environment]::SetEnvironmentVariable("ANDROID_HOME", "$env:LOCALAPPDATA\Android\Sdk", "User")` y reabre la terminal), o crea `android/local.properties` con `sdk.dir=C:/Users/<tu-usuario>/AppData/Local/Android/Sdk`. |
 | `INSTALL_FAILED_UPDATE_INCOMPATIBLE` | Desinstala EventSpot del teléfono y vuelve a ejecutar. |
 
 ## Estructura
