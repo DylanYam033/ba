@@ -72,7 +72,7 @@ export default function SignIn() {
       </View>
       <Pressable onPress={() => router.replace('/sign-up')} style={{ alignSelf: 'center' }}>
         <AppText variant="body" color={colors.textSecondary}>
-          ¿Nuevo en EventSpot? <AppText variant="bodyStrong" color={colors.primary}>Regístrate</AppText>
+          ¿Nuevo en BIBING? <AppText variant="bodyStrong" color={colors.primary}>Regístrate</AppText>
         </AppText>
       </Pressable>
     </AuthShell>

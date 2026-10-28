@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "EventSpot",
+    "name": "BIBING",
     "slug": "eventspot-app",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -39,7 +39,7 @@
       [
         "expo-location",
         {
-          "locationWhenInUsePermission": "EventSpot usa tu ubicación para mostrarte eventos cercanos en el mapa."
+          "locationWhenInUsePermission": "BIBING usa tu ubicación para mostrarte eventos cercanos en el mapa."
         }
       ],
       [

@@ -50,7 +50,7 @@ export default function SignUp() {
   };
 
   return (
-    <AuthShell title="Únete al pulso" subtitle="Crea tu cuenta en segundos.">
+    <AuthShell title="Únete a los eventos" subtitle="Crea tu cuenta en segundos.">
       <View style={{ gap: Spacing.four - 4 }}>
         <View style={styles.types}>
           {ACCOUNT_TYPES.map((t) => {

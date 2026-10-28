@@ -23,7 +23,7 @@ import { CATEGORIES } from '@/lib/categories';
 const SLIDES = [
   {
     title: ['Descubre eventos ', 'cerca de ti', ' en tiempo real'],
-    body: 'Explora el pulso de tu ciudad con un mapa interactivo en vivo.',
+    body: 'Explora los eventos de tu ciudad con un mapa interactivo en vivo.',
     art: 'map' as const,
   },
   {

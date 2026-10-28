@@ -78,7 +78,7 @@ export default function EventDetailScreen() {
   const toggleSaved = () => run('save', isSaved ? () => eventsApi.unsave(id) : () => eventsApi.save(id), { isSaved: !isSaved });
 
   const share = () =>
-    Share.share({ message: `${event.title} — ${formatLongRange(event.startAt, event.endAt)} en ${event.location.name}. Míralo en EventSpot.` });
+    Share.share({ message: `${event.title} — ${formatLongRange(event.startAt, event.endAt)} en ${event.location.name}. Míralo en BIBING.` });
 
   const cancelEvent = () => {
     const doCancel = async () => {

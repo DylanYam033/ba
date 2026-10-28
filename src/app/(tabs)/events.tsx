@@ -39,7 +39,7 @@ export default function MyEvents() {
         <View style={{ gap: Spacing.one }}>
           <AppText variant="display">Mis eventos</AppText>
           <AppText variant="body" color={colors.textSecondary}>
-            Tu pulso curado de la ciudad.
+            Tus eventos de la ciudad.
           </AppText>
         </View>
 

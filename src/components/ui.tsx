@@ -46,14 +46,14 @@ export function AppText({
   return <Text style={[variantStyle[variant], { color: color ?? fallback }, style]} {...rest} />;
 }
 
-/** "EventSpot" wordmark with the brand gradient. */
+/** "BIBING" wordmark with the brand gradient. */
 export function BrandMark({ size = 24 }: { size?: number }) {
   const { colors } = useAppTheme();
   // Gradient text needs masked views; a two-tone wordmark keeps it dependency-free.
   return (
     <Text style={{ fontFamily: Fonts.headlineBlack, fontSize: size, letterSpacing: -0.8 }}>
-      <Text style={{ color: colors.brandStart }}>Event</Text>
-      <Text style={{ color: colors.brandEnd }}>Spot</Text>
+      <Text style={{ color: colors.brandStart }}>BIB</Text>
+      <Text style={{ color: colors.brandEnd }}>ING</Text>
     </Text>
   );
 }

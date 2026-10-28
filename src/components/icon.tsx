@@ -38,6 +38,7 @@ const ICONS = {
   store: ['storefront', 'storefront'],
   edit: ['pencil', 'edit'],
   chevronRight: ['chevron.right', 'chevron_right'],
+  chevronDown: ['chevron.down', 'expand_more'],
   // Categories
   food: ['fork.knife', 'restaurant'],
   nightlife: ['moon.stars.fill', 'nightlife'],
