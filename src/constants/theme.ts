@@ -1,55 +1,75 @@
 /**
- * Below are the colors that are used in the app. The colors are defined in the light and dark mode.
- * There are many other ways to style your app. For example, [Nativewind](https://www.nativewind.dev/), [Tamagui](https://tamagui.dev/), [unistyles](https://unistyl.es/), etc.
+ * "Neon Pulse" design system, taken from the EventSpot Stitch project.
+ * Dark is the primary experience; light mirrors the Stitch "Light Mode" screens.
  */
-
-import '@/global.css';
 
 import { Platform } from 'react-native';
 
-export const Colors = {
-  light: {
-    text: '#000000',
-    background: '#ffffff',
-    backgroundElement: '#F0F0F3',
-    backgroundSelected: '#E0E1E6',
-    textSecondary: '#60646C',
-  },
-  dark: {
-    text: '#ffffff',
-    background: '#000000',
-    backgroundElement: '#212225',
-    backgroundSelected: '#2E3135',
-    textSecondary: '#B0B4BA',
-  },
-} as const;
+const dark = {
+  background: '#0e0e13',
+  surface: '#131318',
+  surfaceLow: '#1b1b20',
+  surfaceContainer: '#1f1f25',
+  surfaceHigh: '#2a292f',
+  surfaceHighest: '#35343a',
+  glass: 'rgba(20, 20, 25, 0.72)',
+  primary: '#e9b3ff',
+  primaryContainer: '#c863fb',
+  onPrimary: '#510074',
+  onPrimaryContainer: '#460066',
+  secondary: '#a2e7ff',
+  tertiary: '#ffb2b7',
+  live: '#ff5449',
+  text: '#e4e1e9',
+  textSecondary: '#d2c1d4',
+  textMuted: '#8a8291',
+  outline: '#9b8c9e',
+  outlineVariant: '#4f4352',
+  error: '#ffb4ab',
+  brandStart: '#BF5AF2',
+  brandEnd: '#a2e7ff',
+  overlay: 'rgba(14, 14, 19, 0.85)',
+};
 
-export type ThemeColor = keyof typeof Colors.light & keyof typeof Colors.dark;
+export type Palette = typeof dark;
 
-export const Fonts = Platform.select({
-  ios: {
-    /** iOS `UIFontDescriptorSystemDesignDefault` */
-    sans: 'system-ui',
-    /** iOS `UIFontDescriptorSystemDesignSerif` */
-    serif: 'ui-serif',
-    /** iOS `UIFontDescriptorSystemDesignRounded` */
-    rounded: 'ui-rounded',
-    /** iOS `UIFontDescriptorSystemDesignMonospaced` */
-    mono: 'ui-monospace',
-  },
-  default: {
-    sans: 'normal',
-    serif: 'serif',
-    rounded: 'normal',
-    mono: 'monospace',
-  },
-  web: {
-    sans: 'var(--font-display)',
-    serif: 'var(--font-serif)',
-    rounded: 'var(--font-rounded)',
-    mono: 'var(--font-mono)',
-  },
-});
+const light: Palette = {
+  background: '#ffffff',
+  surface: '#f6f6fb',
+  surfaceLow: '#f0f0f6',
+  surfaceContainer: '#e7e8ee',
+  surfaceHigh: '#e1e2e8',
+  surfaceHighest: '#dbdde3',
+  glass: 'rgba(255, 255, 255, 0.85)',
+  primary: '#683ad1',
+  primaryContainer: '#ac8eff',
+  onPrimary: '#f7f0ff',
+  onPrimaryContainer: '#2a0070',
+  secondary: '#7343a9',
+  tertiary: '#b0222a',
+  live: '#b41340',
+  text: '#2d2f33',
+  textSecondary: '#5a5b60',
+  textMuted: '#75777b',
+  outline: '#75777b',
+  outlineVariant: '#acadb1',
+  error: '#b41340',
+  brandStart: '#6C3FD6',
+  brandEnd: '#ac8eff',
+  overlay: 'rgba(255, 255, 255, 0.9)',
+};
+
+export const Colors = { dark, light } as const;
+
+export const Fonts = {
+  headline: 'Epilogue_800ExtraBold',
+  headlineBlack: 'Epilogue_900Black',
+  headlineBold: 'Epilogue_700Bold',
+  body: 'Manrope_500Medium',
+  bodyRegular: 'Manrope_400Regular',
+  bodyBold: 'Manrope_700Bold',
+  bodyExtraBold: 'Manrope_800ExtraBold',
+};
 
 export const Spacing = {
   half: 2,
@@ -61,5 +81,13 @@ export const Spacing = {
   six: 64,
 } as const;
 
-export const BottomTabInset = Platform.select({ ios: 50, android: 80 }) ?? 0;
-export const MaxContentWidth = 800;
+export const Radius = {
+  sm: 12,
+  md: 24,
+  lg: 32,
+  full: 999,
+} as const;
+
+/** Height of the floating glass tab bar, used to pad scroll content. */
+export const TabBarHeight = Platform.select({ ios: 88, default: 76 });
+export const MaxContentWidth = 640;

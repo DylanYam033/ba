@@ -1,56 +1,102 @@
-# Welcome to your Expo app 👋
+# EventSpot App
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+App móvil de EventSpot (Expo SDK 58 + Expo Router) para descubrir eventos cercanos en un mapa en tiempo real. Consume el backend [`eventspot-api`](../eventspot-api).
 
-## Get started
+## Requisitos
 
-1. Install dependencies
+- **Node.js** 20 o superior.
+- **Android Studio**, con Android SDK y su JDK.
+- **Docker Desktop**, para el backend.
+- **ngrok**, para exponer el API con una URL pública.
+- Un teléfono Android con **Depuración por USB** activada (*Ajustes → Acerca del teléfono* → toca 7 veces "Número de compilación" → *Opciones de desarrollador* → *Depuración por USB*), conectado por cable. `adb devices` debe mostrarlo con estado `device`.
 
-   ```bash
-   npm install
-   ```
-
-2. Start the app
-
-   ```bash
-   npx expo start
-   ```
-
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **src/app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
+## 1. Backend + ngrok
 
 ```bash
-npm run reset-project
+cd eventspot-api
+docker compose up -d
+ngrok http 3000
 ```
 
-This command will move the starter code to the **example** directory and create a blank **src/app** directory where you can start developing.
+Copia la URL `https://….ngrok-free.dev` que muestra ngrok. Para comprobarla, abre `<url>/api/docs` en el navegador: debe cargar Swagger.
 
-### Other setup steps
+## 2. Configurar la app
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+```bash
+cd eventspot-app
+npm install
+```
 
-## Learn more
+Crea `eventspot-app/.env.local` a partir de [`.env.example`](.env.example):
 
-To learn more about developing your project with Expo, look at the following resources:
+```
+EXPO_PUBLIC_API_URL=https://tu-subdominio.ngrok-free.dev/api
+GOOGLE_MAPS_API_KEY=tu_key
+```
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+- `EXPO_PUBLIC_API_URL`: la URL de ngrok **terminada en `/api`**.
+- `GOOGLE_MAPS_API_KEY`: sin ella la app funciona, pero el mapa sale en blanco. Ver [API key de Google Maps](#api-key-de-google-maps).
 
-## Join the community
+## 3. Correr en el teléfono
 
-Join our community of developers creating universal apps.
+Con el teléfono conectado por cable:
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+```bash
+npx expo run:android
+```
+
+Compila la app, la instala en el teléfono, arranca Metro y la abre. La primera vez tarda varios minutos; después es mucho más rápido. Mientras Metro esté corriendo, los cambios en el código se ven al instante en el teléfono.
+
+Cuenta de prueba: `demo@eventspot.com` / `password123`.
+
+> Si reinicias ngrok y la URL cambia, actualiza `.env.local` y vuelve a ejecutar `npx expo run:android`.
+
+### Versión release
+
+```bash
+npx expo run:android --variant release
+```
+
+Instala una versión optimizada, con el código empaquetado dentro de la app: no necesita Metro ni el cable para seguir usándola. Usa la URL del API que haya en `.env.local` al momento de compilar.
+
+## Ver logs
+
+- **App:** aparecen en la terminal donde corre `npx expo run:android`. En modo desarrollo, cada petición al API se imprime con su resultado, por ejemplo `[api] POST /auth/login → 401 Invalid credentials`. Pulsa `j` en esa terminal para abrir React Native DevTools (consola y red).
+- **API:**
+  ```bash
+  docker logs -f eventspot_api
+  ```
+
+## API key de Google Maps
+
+1. En [Google Cloud Console](https://console.cloud.google.com/), habilita **Maps SDK for Android** en tu proyecto. Pide tener facturación configurada; el mapa móvil no tiene costo.
+2. *APIs y servicios → Credenciales → Crear credenciales → Clave de API*.
+3. Restríngela a **Apps de Android** con:
+   - Paquete: `com.eventspot.app`
+   - **SHA-1**: después de la primera compilación, ejecuta `cd android && gradlew.bat signingReport` y copia el `SHA1` (debug y release usan el mismo certificado).
+4. Ponla en `.env.local` y vuelve a ejecutar `npx expo run:android`.
+
+## Problemas comunes
+
+| Síntoma | Solución |
+|---|---|
+| "No se pudo conectar con el servidor (…)" | Revisa que ngrok y Docker estén corriendo y que la URL del mensaje sea la de `.env.local`. Si no lo es, vuelve a ejecutar `npx expo run:android`. |
+| Mapa en blanco o gris | Falta `GOOGLE_MAPS_API_KEY` o la key no tiene el paquete y SHA-1 correctos. |
+| "Ese correo o usuario ya está en uso" | El correo o el nombre de usuario ya existen; usa otros o inicia sesión. |
+| `adb devices` no muestra el teléfono | Cable de solo carga, depuración USB apagada o aviso de autorización sin aceptar en el teléfono. |
+| `INSTALL_FAILED_UPDATE_INCOMPATIBLE` | Desinstala EventSpot del teléfono y vuelve a ejecutar. |
+
+## Estructura
+
+```
+src/
+├── app/              # Rutas (Expo Router)
+│   ├── (tabs)/       # Mapa, Explorar, Mis eventos, Perfil
+│   ├── event/[id]    # Detalle de evento
+│   ├── create-event  # Crear evento (3 pasos)
+│   └── welcome, sign-in, sign-up, edit-profile
+├── components/       # UI del sistema "Neon Pulse", tarjetas, mapa
+├── ctx/              # Sesión (auth) y tema
+├── hooks/            # Ubicación, carga de datos, socket de asistentes
+└── lib/              # Cliente HTTP, endpoints, tipos, formatos
+```

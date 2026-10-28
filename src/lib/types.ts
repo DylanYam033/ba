@@ -1,0 +1,137 @@
+/** Shapes returned by eventspot-api (see prisma/schema.prisma). */
+
+export type EventCategory =
+  | 'food'
+  | 'nightlife'
+  | 'music'
+  | 'sports'
+  | 'art'
+  | 'festival'
+  | 'corporate'
+  | 'community'
+  | 'cinema'
+  | 'wellness'
+  | 'food_truck'
+  | 'other';
+
+export type EventStatus = 'draft' | 'published' | 'live' | 'finished' | 'cancelled';
+export type AccountType = 'user' | 'business' | 'admin';
+
+export interface User {
+  id: string;
+  username: string;
+  email: string;
+  avatarUrl: string | null;
+  bio: string | null;
+  accountType: AccountType;
+  isVerified: boolean;
+  createdAt: string;
+}
+
+export interface Location {
+  id: string;
+  name: string;
+  address: string | null;
+  city: string | null;
+  country: string | null;
+  latitude: number;
+  longitude: number;
+}
+
+export interface EventSummary {
+  id: string;
+  title: string;
+  description: string | null;
+  coverUrl: string | null;
+  category: EventCategory;
+  status: EventStatus;
+  isFree: boolean;
+  price: number | null;
+  currency: string | null;
+  startAt: string;
+  endAt: string;
+  locationId: string;
+  organizerId: string;
+  maxCapacity: number | null;
+  currentAttendees: number;
+}
+
+/** Rows from the geo queries (nearby / trending) carry flattened venue fields. */
+export interface NearbyEvent extends EventSummary {
+  locationName: string;
+  locationAddress: string | null;
+  latitude: number;
+  longitude: number;
+  distance_km?: number;
+}
+
+export interface EventDetail extends EventSummary {
+  location: Location;
+  tags: { tag: string }[];
+  organizer: { id: string; username: string; avatarUrl: string | null };
+}
+
+export type EventWithLocation = EventSummary & { location: Location };
+
+export interface MapPin {
+  id: string;
+  latitude: number;
+  longitude: number;
+  category: EventCategory;
+  status: EventStatus;
+  currentAttendees: number;
+  title: string;
+}
+
+export interface Attendee {
+  userId: string;
+  user: { id: string; username: string; avatarUrl: string | null };
+}
+
+export interface Photo {
+  id: string;
+  url: string;
+  thumbnailUrl: string | null;
+  caption: string | null;
+  likesCount: number;
+  uploadedAt: string;
+}
+
+export interface Paginated<T> {
+  data: T[];
+  meta: { page: number; limit: number; total: number; totalPages: number };
+}
+
+export interface UserStats {
+  eventsAttended: number;
+  photosShared: number;
+  followers: number;
+  following: number;
+  savedEvents: number;
+}
+
+export interface Tokens {
+  accessToken: string;
+  refreshToken: string;
+}
+
+export interface CreateEventInput {
+  title: string;
+  description?: string;
+  category: EventCategory;
+  startAt: string;
+  endAt: string;
+  organizerType: 'user' | 'business';
+  isFree?: boolean;
+  price?: number;
+  currency?: string;
+  maxCapacity?: number;
+  tags?: string[];
+  location: {
+    name: string;
+    address?: string;
+    city?: string;
+    latitude: number;
+    longitude: number;
+  };
+}

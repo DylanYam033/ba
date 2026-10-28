@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "eventspot-app",
+    "name": "EventSpot",
     "slug": "eventspot-app",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -11,8 +11,10 @@
       "icon": "./assets/expo.icon"
     },
     "android": {
+      "package": "com.eventspot.app",
+      "versionCode": 1,
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#0e0e13",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
@@ -28,9 +30,24 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#208AEF",
+          "backgroundColor": "#0e0e13",
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 76
+        }
+      ],
+      "expo-secure-store",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "EventSpot usa tu ubicación para mostrarte eventos cercanos en el mapa."
+        }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "usesCleartextTraffic": true
+          }
         }
       ]
     ],
