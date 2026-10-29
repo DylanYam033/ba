@@ -16,6 +16,8 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 
 import { AuthProvider, useAuth } from '@/ctx/auth';
+import { NotificationsProvider } from '@/ctx/notifications';
+import { SocketProvider } from '@/ctx/socket';
 import { AppThemeProvider, useAppTheme } from '@/ctx/theme';
 
 SplashScreen.preventAutoHideAsync();
@@ -34,7 +36,11 @@ export default function RootLayout() {
   return (
     <AppThemeProvider>
       <AuthProvider>
-        <RootNavigator ready={fontsLoaded} />
+        <SocketProvider>
+          <NotificationsProvider>
+            <RootNavigator ready={fontsLoaded} />
+          </NotificationsProvider>
+        </SocketProvider>
       </AuthProvider>
     </AppThemeProvider>
   );
@@ -65,6 +71,10 @@ function RootNavigator({ ready }: { ready: boolean }) {
           <Stack.Screen name="event/[id]" />
           <Stack.Screen name="create-event" options={{ presentation: 'modal' }} />
           <Stack.Screen name="edit-profile" options={{ presentation: 'modal' }} />
+          <Stack.Screen name="notifications" />
+          <Stack.Screen name="user/[id]" />
+          <Stack.Screen name="follows" />
+          <Stack.Screen name="photo-viewer" options={{ presentation: 'fullScreenModal', animation: 'fade' }} />
         </Stack.Protected>
         <Stack.Protected guard={!user}>
           <Stack.Screen name="welcome" />

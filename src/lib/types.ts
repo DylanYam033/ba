@@ -90,11 +90,48 @@ export interface Attendee {
 
 export interface Photo {
   id: string;
+  eventId: string;
+  uploaderId: string;
   url: string;
   thumbnailUrl: string | null;
   caption: string | null;
   likesCount: number;
+  likedByMe: boolean;
   uploadedAt: string;
+  uploader: UserRef;
+}
+
+/** The compact user shape embedded in other resources. */
+export interface UserRef {
+  id: string;
+  username: string;
+  avatarUrl: string | null;
+}
+
+/** GET /users/:id — another user's profile (email only present for yourself). */
+export interface PublicUser extends Omit<User, 'email'> {
+  email?: string;
+  stats: UserStats;
+  isFollowing: boolean;
+}
+
+export type NotificationType =
+  | 'event_starting'
+  | 'new_attendee'
+  | 'event_updated'
+  | 'event_cancelled'
+  | 'new_photo'
+  | 'new_follower'
+  | 'event_recommendation';
+
+export interface AppNotification {
+  id: string;
+  type: NotificationType;
+  title: string;
+  body: string | null;
+  data: { eventId?: string; userId?: string; photoId?: string } | null;
+  isRead: boolean;
+  createdAt: string;
 }
 
 export interface Paginated<T> {

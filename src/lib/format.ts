@@ -50,3 +50,14 @@ export function priceLabel(e: Pick<EventSummary, 'isFree' | 'price' | 'currency'
   if (e.isFree || !e.price) return 'Gratis';
   return `${e.currency ?? ''} ${e.price.toLocaleString(LOCALE)}`.trim();
 }
+
+/** "ahora", "hace 5 min", "hace 3 h", "hace 2 d", then a short date. */
+export function formatRelative(iso: string) {
+  const mins = Math.round((Date.now() - new Date(iso).getTime()) / 60000);
+  if (mins < 1) return 'ahora';
+  if (mins < 60) return `hace ${mins} min`;
+  const hours = Math.round(mins / 60);
+  if (hours < 24) return `hace ${hours} h`;
+  const days = Math.round(hours / 24);
+  return days < 7 ? `hace ${days} d` : formatShortDate(iso);
+}

@@ -1,5 +1,6 @@
-import { api } from './api';
+import { api, upload, type UploadFile } from './api';
 import type {
+  AppNotification,
   Attendee,
   CreateEventInput,
   EventCategory,
@@ -10,8 +11,10 @@ import type {
   NearbyEvent,
   Paginated,
   Photo,
+  PublicUser,
   Tokens,
   User,
+  UserRef,
   UserStats,
 } from './types';
 
@@ -49,12 +52,35 @@ export const eventsApi = {
   save: (id: string) => api<void>(`/events/${id}/save`, { method: 'POST' }),
   unsave: (id: string) => api<void>(`/events/${id}/save`, { method: 'DELETE' }),
   attendees: (id: string, limit = 5) => api<Paginated<Attendee>>(`/events/${id}/attendees`, { query: { limit } }),
-  photos: (id: string) => api<Paginated<Photo>>(`/events/${id}/photos`),
+  photos: (id: string, limit = 50) => api<Paginated<Photo>>(`/events/${id}/photos`, { query: { limit } }),
 };
 
 export const usersApi = {
   myEvents: (filter: 'going' | 'saved' | 'past') => api<EventWithLocation[]>('/users/me/events', { query: { filter } }),
   stats: (id: string) => api<UserStats>(`/users/${id}/stats`),
-  update: (id: string, body: { username?: string; bio?: string; avatarUrl?: string }) =>
+  update: (id: string, body: { username?: string; bio?: string }) =>
     api<User>(`/users/${id}`, { method: 'PATCH', body }),
+  uploadAvatar: (file: UploadFile) => upload<User>('/users/me/avatar', file),
+  get: (id: string) => api<PublicUser>(`/users/${id}`),
+  /** Published events the user organizes, newest start first. */
+  events: (id: string) => api<EventWithLocation[]>(`/users/${id}/events`),
+  follow: (id: string) => api<void>(`/users/${id}/follow`, { method: 'POST' }),
+  unfollow: (id: string) => api<void>(`/users/${id}/follow`, { method: 'DELETE' }),
+  followers: (id: string, page = 1) => api<Paginated<UserRef>>(`/users/${id}/followers`, { query: { page, limit: 30 } }),
+  following: (id: string, page = 1) => api<Paginated<UserRef>>(`/users/${id}/following`, { query: { page, limit: 30 } }),
+};
+
+export const photosApi = {
+  upload: (eventId: string, file: UploadFile, caption?: string) =>
+    upload<Photo>(`/photos/event/${eventId}`, file, { caption }),
+  like: (id: string) => api<void>(`/photos/${id}/like`, { method: 'POST' }),
+  unlike: (id: string) => api<void>(`/photos/${id}/like`, { method: 'DELETE' }),
+  remove: (id: string) => api<void>(`/photos/${id}`, { method: 'DELETE' }),
+};
+
+export const notificationsApi = {
+  list: (page = 1) => api<Paginated<AppNotification>>('/notifications', { query: { page, limit: 20 } }),
+  unreadCount: () => api<{ count: number }>('/notifications/unread-count'),
+  markRead: (id: string) => api<AppNotification>(`/notifications/${id}/read`, { method: 'PATCH' }),
+  markAllRead: () => api<void>('/notifications/read-all', { method: 'PATCH' }),
 };

@@ -39,6 +39,11 @@ const ICONS = {
   edit: ['pencil', 'edit'],
   chevronRight: ['chevron.right', 'chevron_right'],
   chevronDown: ['chevron.down', 'expand_more'],
+  bell: ['bell', 'notifications'],
+  heart: ['heart', 'favorite'],
+  heartFill: ['heart.fill', 'favorite'],
+  trash: ['trash', 'delete'],
+  personAdd: ['person.badge.plus', 'person_add'],
   // Categories
   food: ['fork.knife', 'restaurant'],
   nightlife: ['moon.stars.fill', 'nightlife'],

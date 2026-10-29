@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Avatar, CarouselEventCard } from '@/components/event-cards';
 import { Icon } from '@/components/icon';
 import { EventMap } from '@/components/map/event-map';
+import { NotificationsBell } from '@/components/top-bar';
 import { AppText, Chip, glow } from '@/components/ui';
 import { Fonts, Radius, Spacing, TabBarHeight } from '@/constants/theme';
 import { useCurrentUser } from '@/ctx/auth';
@@ -81,6 +82,7 @@ export default function MapScreen() {
               En vivo
             </AppText>
           </Pressable>
+          <NotificationsBell />
           <Pressable onPress={() => router.navigate('/profile')} accessibilityLabel="Perfil">
             <Avatar uri={user.avatarUrl} name={user.username} size={32} />
           </Pressable>

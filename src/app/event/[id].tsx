@@ -1,7 +1,7 @@
 import { Image } from 'expo-image';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState, type ReactNode } from 'react';
-import { Alert, FlatList, Platform, Pressable, ScrollView, Share, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Alert, FlatList, Platform, Pressable, ScrollView, Share, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Avatar, CarouselEventCard, CategoryBadge } from '@/components/event-cards';
@@ -9,21 +9,24 @@ import { EventCover } from '@/components/event-cover';
 import { Icon } from '@/components/icon';
 import { EventMap } from '@/components/map/event-map';
 import { BackButton } from '@/components/top-bar';
-import { AppText, ErrorState, GhostButton, GradientButton, IconButton, LiveBadge, LoadingState } from '@/components/ui';
+import { AppText, ErrorState, GhostButton, GradientButton, IconButton, LiveBadge, LoadingState, Pill } from '@/components/ui';
 import { MaxContentWidth, Radius, Spacing } from '@/constants/theme';
 import { useCurrentUser } from '@/ctx/auth';
 import { useAppTheme } from '@/ctx/theme';
-import { useLiveAttendees } from '@/hooks/use-live-attendees';
+import { useLiveEvent } from '@/hooks/use-live-event';
 import { useQuery } from '@/hooks/use-query';
-import { eventsApi, usersApi } from '@/lib/endpoints';
+import { mediaSource } from '@/lib/api';
+import { eventsApi, photosApi, usersApi } from '@/lib/endpoints';
 import { formatLongRange, hasEnded, isLive, priceLabel } from '@/lib/format';
+import { pickImage } from '@/lib/pick-image';
+import type { Photo } from '@/lib/types';
 
 export default function EventDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { colors } = useAppTheme();
   const user = useCurrentUser();
   const insets = useSafeAreaInsets();
-  const [busy, setBusy] = useState<'join' | 'save' | 'cancel' | null>(null);
+  const [busy, setBusy] = useState<'join' | 'save' | 'cancel' | 'photo' | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
 
   const query = useQuery(async () => {
@@ -46,7 +49,13 @@ export default function EventDetailScreen() {
     };
   }, [id]);
 
-  const liveCount = useLiveAttendees(id, query.data?.event.currentAttendees);
+  const addPhoto = (photo: Photo) =>
+    query.setData((d) => d && { ...d, photos: d.photos.some((p) => p.id === photo.id) ? d.photos : [photo, ...d.photos] });
+
+  const liveCount = useLiveEvent(id, query.data?.event.currentAttendees, {
+    onPhoto: addPhoto,
+    onStatus: (status) => query.setData((d) => d && { ...d, event: { ...d.event, status } }),
+  });
 
   if (query.loading) return <Shell><LoadingState /></Shell>;
   if (query.error || !query.data) return <Shell><ErrorState error={query.error ?? new Error('Evento no encontrado')} onRetry={query.refresh} /></Shell>;
@@ -55,6 +64,7 @@ export default function EventDetailScreen() {
   const isOrganizer = event.organizerId === user.id;
   const ended = hasEnded(event);
   const count = liveCount ?? event.currentAttendees;
+  const canUpload = (isGoing || isOrganizer) && event.status !== 'cancelled';
 
   const run = async (kind: 'join' | 'save', fn: () => Promise<unknown>, patch: Partial<typeof query.data>) => {
     setBusy(kind);
@@ -76,6 +86,23 @@ export default function EventDetailScreen() {
     });
 
   const toggleSaved = () => run('save', isSaved ? () => eventsApi.unsave(id) : () => eventsApi.save(id), { isSaved: !isSaved });
+
+  const uploadPhoto = async () => {
+    setActionError(null);
+    const file = await pickImage();
+    if (!file) return;
+    setBusy('photo');
+    try {
+      addPhoto(await photosApi.upload(id, file));
+    } catch (e) {
+      setActionError((e as Error).message);
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const openPhoto = (index: number) => router.push({ pathname: '/photo-viewer', params: { eventId: id, index: String(index) } });
+  const openUser = (userId: string) => router.push({ pathname: '/user/[id]', params: { id: userId } });
 
   const share = () =>
     Share.share({ message: `${event.title} — ${formatLongRange(event.startAt, event.endAt)} en ${event.location.name}. Míralo en BIBING.` });
@@ -144,9 +171,13 @@ export default function EventDetailScreen() {
           <View style={[styles.proof, { backgroundColor: colors.surfaceContainer }]}>
             <View style={styles.avatars}>
               {attendees.map((a, i) => (
-                <View key={a.userId} style={{ marginLeft: i ? -12 : 0, borderRadius: 22, borderWidth: 2, borderColor: colors.surfaceContainer }}>
+                <Pressable
+                  key={a.userId}
+                  onPress={() => openUser(a.userId)}
+                  accessibilityLabel={`Ver perfil de @${a.user.username}`}
+                  style={{ marginLeft: i ? -12 : 0, borderRadius: 22, borderWidth: 2, borderColor: colors.surfaceContainer }}>
                   <Avatar uri={a.user.avatarUrl} name={a.user.username} size={38} />
-                </View>
+                </Pressable>
               ))}
             </View>
             <AppText variant="bodyStrong" style={{ flex: 1 }}>
@@ -192,10 +223,27 @@ export default function EventDetailScreen() {
           <View style={{ gap: Spacing.three }}>
             <View style={[styles.row, { justifyContent: 'space-between' }]}>
               <AppText variant="heading">Fotos del evento</AppText>
-              {isLive(event) && <AppText variant="label" color={colors.secondary}>En vivo</AppText>}
+              {canUpload ? (
+                <Pressable onPress={uploadPhoto} disabled={busy === 'photo'} accessibilityRole="button" accessibilityLabel="Subir foto">
+                  <Pill>
+                    {busy === 'photo' ? (
+                      <ActivityIndicator size="small" color={colors.secondary} />
+                    ) : (
+                      <Icon name="camera" size={14} color={colors.secondary} />
+                    )}
+                    <AppText variant="label" color={colors.secondary}>
+                      {busy === 'photo' ? 'Subiendo…' : 'Subir foto'}
+                    </AppText>
+                  </Pill>
+                </Pressable>
+              ) : (
+                isLive(event) && <AppText variant="label" color={colors.secondary}>En vivo</AppText>
+              )}
             </View>
             {photos.length === 0 ? (
-              <AppText variant="caption">Aún no hay fotos. Las fotos subidas durante el evento aparecerán aquí.</AppText>
+              <AppText variant="caption">
+                {canUpload ? 'Sé el primero en compartir una foto del plan.' : 'Aún no hay fotos. Marca “Voy” para compartir las tuyas.'}
+              </AppText>
             ) : (
               <FlatList
                 horizontal
@@ -203,8 +251,18 @@ export default function EventDetailScreen() {
                 keyExtractor={(p) => p.id}
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={{ gap: Spacing.three }}
-                renderItem={({ item }) => (
-                  <Image source={{ uri: item.thumbnailUrl ?? item.url }} style={styles.photo} contentFit="cover" />
+                renderItem={({ item, index }) => (
+                  <Pressable onPress={() => openPhoto(index)} accessibilityLabel={`Foto de @${item.uploader.username}`}>
+                    <Image source={mediaSource(item.thumbnailUrl ?? item.url)} style={styles.photo} contentFit="cover" />
+                    {item.likesCount > 0 && (
+                      <View style={styles.photoLikes}>
+                        <Icon name="heartFill" size={12} color="#fff" />
+                        <AppText variant="label" color="#fff" style={{ fontSize: 10 }}>
+                          {item.likesCount}
+                        </AppText>
+                      </View>
+                    )}
+                  </Pressable>
                 )}
               />
             )}
@@ -228,13 +286,18 @@ export default function EventDetailScreen() {
           </View>
 
           {/* Organizer */}
-          <View style={[styles.proof, { backgroundColor: colors.surfaceContainer }]}>
+          <Pressable
+            onPress={() => openUser(event.organizer.id)}
+            accessibilityRole="button"
+            accessibilityLabel={`Ver perfil de @${event.organizer.username}`}
+            style={[styles.proof, { backgroundColor: colors.surfaceContainer }]}>
             <Avatar uri={event.organizer.avatarUrl} name={event.organizer.username} size={44} />
             <View style={{ flex: 1 }}>
               <AppText variant="label">Organiza</AppText>
               <AppText variant="bodyStrong">@{event.organizer.username}</AppText>
             </View>
-          </View>
+            <Icon name="chevronRight" size={20} color={colors.textMuted} />
+          </Pressable>
           {isOrganizer && event.status !== 'cancelled' && !ended && (
             <GhostButton title="Cancelar evento" icon="close" loading={busy === 'cancel'} onPress={cancelEvent} />
           )}
@@ -284,6 +347,18 @@ const styles = StyleSheet.create({
   proof: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three, padding: Spacing.three, borderRadius: Radius.md },
   avatars: { flexDirection: 'row' },
   photo: { width: 160, height: 220, borderRadius: Radius.md },
+  photoLikes: {
+    position: 'absolute',
+    left: 8,
+    bottom: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 10,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+  },
   mapBox: { height: 190, borderRadius: Radius.md, overflow: 'hidden' },
   venue: { padding: Spacing.three, borderRadius: Radius.md - 8, gap: 2 },
   floatingBack: { position: 'absolute', left: Spacing.four, right: Spacing.four, flexDirection: 'row', justifyContent: 'space-between' },

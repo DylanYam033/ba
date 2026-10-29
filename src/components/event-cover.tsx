@@ -3,6 +3,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 
 import { useAppTheme } from '@/ctx/theme';
+import { mediaSource } from '@/lib/api';
 import { CATEGORIES } from '@/lib/categories';
 import type { EventCategory } from '@/lib/types';
 
@@ -33,7 +34,7 @@ export function EventCover({
   return (
     <View style={[styles.base, { backgroundColor: uri ? colors.surfaceHigh : colors.surfaceContainer }, style]}>
       {uri ? (
-        <Image source={{ uri }} style={StyleSheet.absoluteFill} contentFit="cover" transition={200} />
+        <Image source={mediaSource(uri)} style={StyleSheet.absoluteFill} contentFit="cover" transition={200} />
       ) : (
         // Vertically centered on the right edge: card corners hold the live badge and the attendee chip.
         <View style={{ position: 'absolute', right: -iconSize * 0.17, top: '50%', marginTop: -iconSize / 2 }}>

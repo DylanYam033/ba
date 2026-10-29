@@ -4,6 +4,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Fonts, Radius, Spacing } from '@/constants/theme';
 import { useAppTheme } from '@/ctx/theme';
+import { mediaSource } from '@/lib/api';
 import { CATEGORIES } from '@/lib/categories';
 import { compactNumber, formatDayTime, formatDistance, formatShortDate, isLive } from '@/lib/format';
 import type { EventCategory, EventSummary } from '@/lib/types';
@@ -34,7 +35,7 @@ export function Avatar({ uri, name, size = 40 }: { uri?: string | null; name: st
   return (
     <View style={[styles.avatar, { width: size, height: size, borderRadius: size / 2, backgroundColor: colors.surfaceHighest }]}>
       {uri ? (
-        <Image source={{ uri }} style={StyleSheet.absoluteFill} contentFit="cover" />
+        <Image source={mediaSource(uri)} style={StyleSheet.absoluteFill} contentFit="cover" />
       ) : (
         <Text style={{ fontFamily: Fonts.headline, fontSize: size * 0.4, color: colors.primary }}>
           {name.slice(0, 1).toUpperCase()}

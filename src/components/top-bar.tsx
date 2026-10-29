@@ -5,13 +5,33 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Spacing } from '@/constants/theme';
 import { useAuth } from '@/ctx/auth';
+import { useNotifications } from '@/ctx/notifications';
 import { useAppTheme } from '@/ctx/theme';
 
 import { Avatar } from './event-cards';
 import { Icon } from './icon';
 import { AppText, BrandMark, glow } from './ui';
 
-/** Glass app bar from the prototype: wordmark centered, avatar on the right. */
+/** Bell with the unread-notifications badge; opens the notifications screen. */
+export function NotificationsBell() {
+  const { colors } = useAppTheme();
+  const { unreadCount } = useNotifications();
+  const label = unreadCount > 0 ? `Notificaciones, ${unreadCount} sin leer` : 'Notificaciones';
+  return (
+    <Pressable onPress={() => router.push('/notifications')} hitSlop={8} accessibilityRole="button" accessibilityLabel={label}>
+      <Icon name="bell" size={24} color={colors.text} />
+      {unreadCount > 0 && (
+        <View style={[styles.badge, { backgroundColor: colors.live, borderColor: colors.overlay }]}>
+          <AppText variant="label" color="#fff" style={{ fontSize: 9, lineHeight: 12 }}>
+            {unreadCount > 99 ? '99+' : unreadCount}
+          </AppText>
+        </View>
+      )}
+    </Pressable>
+  );
+}
+
+/** Glass app bar from the prototype: wordmark centered, bell + avatar on the right. */
 export function TopBar({ left, title, right }: { left?: ReactNode; title?: string; right?: ReactNode }) {
   const { colors } = useAppTheme();
   const { user } = useAuth();
@@ -24,11 +44,14 @@ export function TopBar({ left, title, right }: { left?: ReactNode; title?: strin
       <View style={[styles.side, { alignItems: 'flex-end' }]}>
         {right ??
           (user && (
-            <Pressable onPress={() => router.navigate('/profile')} accessibilityLabel="Perfil">
-              <View style={{ borderRadius: 20, borderWidth: 2, borderColor: colors.primaryContainer }}>
-                <Avatar uri={user.avatarUrl} name={user.username} size={36} />
-              </View>
-            </Pressable>
+            <View style={styles.actions}>
+              <NotificationsBell />
+              <Pressable onPress={() => router.navigate('/profile')} accessibilityLabel="Perfil">
+                <View style={{ borderRadius: 20, borderWidth: 2, borderColor: colors.primaryContainer }}>
+                  <Avatar uri={user.avatarUrl} name={user.username} size={36} />
+                </View>
+              </Pressable>
+            </View>
           ))}
       </View>
     </View>
@@ -57,6 +80,19 @@ const styles = StyleSheet.create({
     paddingBottom: Spacing.three - 4,
     zIndex: 10,
   },
-  side: { width: 72 },
+  side: { width: 88 },
+  actions: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three },
+  badge: {
+    position: 'absolute',
+    top: -4,
+    right: -8,
+    minWidth: 18,
+    height: 18,
+    paddingHorizontal: 4,
+    borderRadius: 9,
+    borderWidth: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   back: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
 });
