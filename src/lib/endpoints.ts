@@ -39,10 +39,13 @@ export const authApi = {
 };
 
 export const eventsApi = {
-  /** `from`/`to` (ISO) keep only upcoming or live events overlapping that window. */
+  /**
+   * `from`/`to` (ISO) keep only upcoming or live events overlapping that window.
+   * `q` matches every word against title, description and category, ignoring case and accents.
+   */
   nearby: (
     c: Coords,
-    opts: { radiusKm?: number; category?: EventCategory; status?: string; limit?: number } & Partial<TimeWindow> = {},
+    opts: { radiusKm?: number; category?: EventCategory; status?: string; limit?: number; q?: string } & Partial<TimeWindow> = {},
   ) =>
     api<Paginated<NearbyEvent>>('/events', {
       query: {
@@ -54,6 +57,7 @@ export const eventsApi = {
         limit: opts.limit ?? 20,
         from: opts.from,
         to: opts.to,
+        q: opts.q,
       },
     }),
   trending: (c: Coords, radiusKm = 25, limit = 10) =>

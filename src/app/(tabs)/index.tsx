@@ -12,12 +12,14 @@ import { AppText, Chip, glow, SegmentedControl } from '@/components/ui';
 import { Fonts, Radius, Spacing, TabBarHeight } from '@/constants/theme';
 import { useCurrentUser } from '@/ctx/auth';
 import { useAppTheme } from '@/ctx/theme';
+import { useDebouncedValue } from '@/hooks/use-debounced-value';
 import { useQuery } from '@/hooks/use-query';
 import { FALLBACK_COORDS, useUserLocation } from '@/hooks/use-user-location';
 import { CATEGORIES, CATEGORY_KEYS } from '@/lib/categories';
 import { eventsApi, type Coords } from '@/lib/endpoints';
 import { hasEnded, isLive, timeWindow, UPCOMING_DAYS, type When } from '@/lib/format';
-import type { EventCategory } from '@/lib/types';
+import { searchTerms } from '@/lib/search';
+import type { EventCategory, MapPin } from '@/lib/types';
 
 const RADIUS_KM = 25;
 
@@ -41,32 +43,50 @@ export default function MapScreen() {
 
   // Strings that only change with `when` or when the day rolls over — safe as query deps.
   const range = timeWindow(when);
+  // A search looks at every event from today on, whatever Hoy/Próximos says.
+  const query = useDebouncedValue(search.trim());
+  const searching = searchTerms(query).length > 0;
+  const searchFrom = timeWindow('today').from;
 
   const pins = useQuery(
-    coords ? () => eventsApi.mapPins(coords, RADIUS_KM, category, range) : null,
-    [coords, category, range.from],
+    coords && !searching ? () => eventsApi.mapPins(coords, RADIUS_KM, category, range) : null,
+    [coords, category, range.from, searching],
   );
   const nearby = useQuery(
-    coords ? () => eventsApi.nearby(coords, { radiusKm: RADIUS_KM, category, limit: 50, ...range }) : null,
-    [coords, category, range.from],
+    coords
+      ? () =>
+          eventsApi.nearby(
+            coords,
+            searching
+              ? { radiusKm: RADIUS_KM, category, limit: 50, from: searchFrom, q: query }
+              : { radiusKm: RADIUS_KM, category, limit: 50, ...range },
+          )
+      : null,
+    [coords, category, range.from, searching ? query : '', searchFrom],
   );
 
-  const q = search.trim().toLowerCase();
-  // The window starts at midnight, so drop today's events that already ended.
-  const visiblePins = useMemo(
+  // Windows start at midnight, so drop today's events that already ended.
+  const matchingCards = useMemo(
     () =>
-      (pins.data ?? []).filter(
-        (p) => !hasEnded(p) && (!liveOnly || isLive(p)) && (!q || p.title.toLowerCase().includes(q)),
-      ),
-    [pins.data, liveOnly, q],
+      (nearby.data?.data ?? [])
+        .filter((e) => !hasEnded(e) && (!liveOnly || isLive(e)))
+        .sort((a, b) => a.startAt.localeCompare(b.startAt)),
+    [nearby.data, liveOnly],
   );
-  const cards = useMemo(() => {
-    const list = (nearby.data?.data ?? [])
-      .filter((e) => !hasEnded(e) && (!liveOnly || isLive(e)) && (!q || e.title.toLowerCase().includes(q)))
-      .sort((a, b) => a.startAt.localeCompare(b.startAt));
-    // Selected pin's card goes first so the sheet reflects the tap.
-    return selectedId ? list.sort((a, b) => Number(b.id === selectedId) - Number(a.id === selectedId)) : list;
-  }, [nearby.data, liveOnly, q, selectedId]);
+  // Search results already carry coordinates, so they double as pins.
+  const visiblePins = useMemo<MapPin[]>(
+    () =>
+      searching ? matchingCards : (pins.data ?? []).filter((p) => !hasEnded(p) && (!liveOnly || isLive(p))),
+    [searching, matchingCards, pins.data, liveOnly],
+  );
+  // Selected pin's card goes first so the sheet reflects the tap.
+  const cards = useMemo(
+    () =>
+      selectedId
+        ? [...matchingCards].sort((a, b) => Number(b.id === selectedId) - Number(a.id === selectedId))
+        : matchingCards,
+    [matchingCards, selectedId],
+  );
 
   const changeWhen = (next: When) => {
     setWhen(next);
@@ -93,6 +113,7 @@ export default function MapScreen() {
             value={search}
             onChangeText={setSearch}
             placeholder="Encuentra eventos..."
+            returnKeyType="search"
             placeholderTextColor={colors.textMuted}
             style={[styles.searchInput, { color: colors.text }]}
           />
@@ -114,7 +135,9 @@ export default function MapScreen() {
           </Pressable>
         </View>
 
-        <SegmentedControl options={WHEN_OPTIONS} value={when} onChange={changeWhen} style={{ marginLeft: Spacing.three }} />
+        {!searching && (
+          <SegmentedControl options={WHEN_OPTIONS} value={when} onChange={changeWhen} style={{ marginLeft: Spacing.three }} />
+        )}
 
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>
           <Chip label="Todo" active={!category} onPress={() => setCategory(undefined)} />
@@ -157,11 +180,15 @@ export default function MapScreen() {
           <View style={styles.sheetHeader}>
             <Pressable onPress={sheet.toggle} style={styles.sheetTitle}>
               <View>
-                <AppText variant="heading">{when === 'today' ? 'Eventos de hoy' : 'Próximos eventos'}</AppText>
+                <AppText variant="heading">
+                  {searching ? 'Resultados' : when === 'today' ? 'Eventos de hoy' : 'Próximos eventos'}
+                </AppText>
                 <AppText variant="label" color={colors.textMuted} style={{ marginTop: 2 }}>
                   {nearby.loading
                     ? 'Buscando…'
-                    : `${cards.length} ${cards.length === 1 ? 'evento' : 'eventos'}${when === 'upcoming' ? ` · ${UPCOMING_DAYS} días` : ''}`}
+                    : `${cards.length} ${cards.length === 1 ? 'evento' : 'eventos'}${
+                        searching ? ' · desde hoy' : when === 'upcoming' ? ` · ${UPCOMING_DAYS} días` : ''
+                      }`}
                 </AppText>
               </View>
               <Animated.View style={sheet.chevronStyle}>
@@ -182,11 +209,13 @@ export default function MapScreen() {
         ) : cards.length === 0 && !nearby.loading ? (
           <View style={{ paddingHorizontal: Spacing.four, gap: Spacing.two }}>
             <AppText variant="caption">
-              {when === 'today'
-                ? `No hay más eventos hoy a menos de ${RADIUS_KM} km con estos filtros.`
-                : `No hay eventos en los próximos ${UPCOMING_DAYS} días a menos de ${RADIUS_KM} km.`}
+              {searching
+                ? `Nada coincide con “${query}” a menos de ${RADIUS_KM} km. Prueba con otra palabra o categoría.`
+                : when === 'today'
+                  ? `No hay más eventos hoy a menos de ${RADIUS_KM} km con estos filtros.`
+                  : `No hay eventos en los próximos ${UPCOMING_DAYS} días a menos de ${RADIUS_KM} km.`}
             </AppText>
-            {when === 'today' ? (
+            {searching ? null : when === 'today' ? (
               <Pressable onPress={() => changeWhen('upcoming')}>
                 <AppText variant="bodyStrong" color={colors.primary}>
                   Ver próximos eventos →
