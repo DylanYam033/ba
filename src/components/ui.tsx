@@ -255,6 +255,40 @@ export function Chip({
   );
 }
 
+/** Pill-shaped tab switcher (e.g. Hoy / Próximos); the active segment looks like an active Chip. */
+export function SegmentedControl<T extends string>({
+  options,
+  value,
+  onChange,
+  style,
+}: {
+  options: { value: T; label: string }[];
+  value: T;
+  onChange: (value: T) => void;
+  style?: StyleProp<ViewStyle>;
+}) {
+  const { colors } = useAppTheme();
+  return (
+    <View accessibilityRole="tablist" style={[styles.segmented, { backgroundColor: colors.glass }, style]}>
+      {options.map((o) => {
+        const active = o.value === value;
+        return (
+          <Pressable
+            key={o.value}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: active }}
+            onPress={() => onChange(o.value)}
+            style={[styles.segment, active && [{ backgroundColor: colors.primary }, glow(colors.primary, 0.4)]]}>
+            <AppText variant="label" color={active ? colors.onPrimary : colors.textSecondary}>
+              {o.label}
+            </AppText>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
+
 export function LiveBadge({ small }: { small?: boolean }) {
   const { colors } = useAppTheme();
   return (
@@ -399,6 +433,8 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: Radius.full,
   },
+  segmented: { flexDirection: 'row', padding: 4, borderRadius: Radius.full, alignSelf: 'flex-start' },
+  segment: { paddingHorizontal: 18, paddingVertical: 8, borderRadius: Radius.full, alignItems: 'center' },
   live: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
   liveDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#fff' },
   liveText: { color: '#fff', fontFamily: Fonts.bodyExtraBold, fontSize: 9, letterSpacing: 1 },

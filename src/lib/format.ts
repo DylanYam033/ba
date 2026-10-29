@@ -51,6 +51,38 @@ export function priceLabel(e: Pick<EventSummary, 'isFree' | 'price' | 'currency'
   return `${e.currency ?? ''} ${e.price.toLocaleString(LOCALE)}`.trim();
 }
 
+export type When = 'today' | 'upcoming';
+
+/** How far ahead "Próximos" looks, counting from tomorrow. */
+export const UPCOMING_DAYS = 7;
+
+/**
+ * `[from, to)` window in ISO, cut at the device's local midnights so "today" is the user's day:
+ * today, or tomorrow through UPCOMING_DAYS ahead.
+ */
+export function timeWindow(when: When, now = new Date()) {
+  const from = new Date(now);
+  from.setHours(0, 0, 0, 0);
+  const to = new Date(from);
+  if (when === 'today') {
+    to.setDate(to.getDate() + 1);
+  } else {
+    from.setDate(from.getDate() + 1);
+    to.setDate(to.getDate() + 1 + UPCOMING_DAYS);
+  }
+  return { from: from.toISOString(), to: to.toISOString() };
+}
+
+/** Day heading for upcoming lists: "Mañana" or "Sábado 31 de octubre". */
+export function formatDayHeading(iso: string, now = new Date()) {
+  const d = new Date(iso);
+  const tomorrow = new Date(now);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  if (d.toDateString() === tomorrow.toDateString()) return 'Mañana';
+  const day = d.toLocaleDateString(LOCALE, { weekday: 'long', day: 'numeric', month: 'long' });
+  return `${day.charAt(0).toUpperCase()}${day.slice(1)}`;
+}
+
 /** "ahora", "hace 5 min", "hace 3 h", "hace 2 d", then a short date. */
 export function formatRelative(iso: string) {
   const mins = Math.round((Date.now() - new Date(iso).getTime()) / 60000);

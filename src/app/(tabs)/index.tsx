@@ -8,7 +8,7 @@ import { Avatar, CarouselEventCard } from '@/components/event-cards';
 import { Icon } from '@/components/icon';
 import { EventMap } from '@/components/map/event-map';
 import { NotificationsBell } from '@/components/top-bar';
-import { AppText, Chip, glow } from '@/components/ui';
+import { AppText, Chip, glow, SegmentedControl } from '@/components/ui';
 import { Fonts, Radius, Spacing, TabBarHeight } from '@/constants/theme';
 import { useCurrentUser } from '@/ctx/auth';
 import { useAppTheme } from '@/ctx/theme';
@@ -16,10 +16,15 @@ import { useQuery } from '@/hooks/use-query';
 import { FALLBACK_COORDS, useUserLocation } from '@/hooks/use-user-location';
 import { CATEGORIES, CATEGORY_KEYS } from '@/lib/categories';
 import { eventsApi, type Coords } from '@/lib/endpoints';
-import { isLive } from '@/lib/format';
+import { hasEnded, isLive, timeWindow, UPCOMING_DAYS, type When } from '@/lib/format';
 import type { EventCategory } from '@/lib/types';
 
 const RADIUS_KM = 25;
+
+const WHEN_OPTIONS: { value: When; label: string }[] = [
+  { value: 'today', label: 'Hoy' },
+  { value: 'upcoming', label: 'Próximos' },
+];
 
 export default function MapScreen() {
   const { colors } = useAppTheme();
@@ -31,24 +36,43 @@ export default function MapScreen() {
   const [search, setSearch] = useState('');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [recentered, setCenter] = useState<Coords | null>(null);
+  const [when, setWhen] = useState<When>('today');
   const center = recentered ?? coords ?? FALLBACK_COORDS;
 
-  const pins = useQuery(coords ? () => eventsApi.mapPins(coords, RADIUS_KM, category) : null, [coords, category]);
+  // Strings that only change with `when` or when the day rolls over — safe as query deps.
+  const range = timeWindow(when);
+
+  const pins = useQuery(
+    coords ? () => eventsApi.mapPins(coords, RADIUS_KM, category, range) : null,
+    [coords, category, range.from],
+  );
   const nearby = useQuery(
-    coords ? () => eventsApi.nearby(coords, { radiusKm: RADIUS_KM, category, limit: 30 }) : null,
-    [coords, category],
+    coords ? () => eventsApi.nearby(coords, { radiusKm: RADIUS_KM, category, limit: 50, ...range }) : null,
+    [coords, category, range.from],
   );
 
   const q = search.trim().toLowerCase();
+  // The window starts at midnight, so drop today's events that already ended.
   const visiblePins = useMemo(
-    () => (pins.data ?? []).filter((p) => (!liveOnly || p.status === 'live') && (!q || p.title.toLowerCase().includes(q))),
+    () =>
+      (pins.data ?? []).filter(
+        (p) => !hasEnded(p) && (!liveOnly || isLive(p)) && (!q || p.title.toLowerCase().includes(q)),
+      ),
     [pins.data, liveOnly, q],
   );
   const cards = useMemo(() => {
-    const list = (nearby.data?.data ?? []).filter((e) => (!liveOnly || isLive(e)) && (!q || e.title.toLowerCase().includes(q)));
+    const list = (nearby.data?.data ?? [])
+      .filter((e) => !hasEnded(e) && (!liveOnly || isLive(e)) && (!q || e.title.toLowerCase().includes(q)))
+      .sort((a, b) => a.startAt.localeCompare(b.startAt));
     // Selected pin's card goes first so the sheet reflects the tap.
-    return selectedId ? [...list].sort((a, b) => Number(b.id === selectedId) - Number(a.id === selectedId)) : list;
+    return selectedId ? list.sort((a, b) => Number(b.id === selectedId) - Number(a.id === selectedId)) : list;
   }, [nearby.data, liveOnly, q, selectedId]);
+
+  const changeWhen = (next: When) => {
+    setWhen(next);
+    setSelectedId(null);
+    if (next === 'upcoming') setLiveOnly(false);
+  };
 
   const sheet = useCollapsibleSheet();
 
@@ -72,21 +96,25 @@ export default function MapScreen() {
             placeholderTextColor={colors.textMuted}
             style={[styles.searchInput, { color: colors.text }]}
           />
-          <Pressable
-            onPress={() => setLiveOnly((v) => !v)}
-            accessibilityRole="switch"
-            accessibilityState={{ checked: liveOnly }}
-            style={[styles.liveToggle, { backgroundColor: liveOnly ? colors.live : 'transparent', borderColor: colors.live }]}>
-            <View style={[styles.liveDot, { backgroundColor: liveOnly ? '#fff' : colors.live }]} />
-            <AppText variant="label" color={liveOnly ? '#fff' : colors.text} style={{ fontSize: 10 }}>
-              En vivo
-            </AppText>
-          </Pressable>
+          {when === 'today' && (
+            <Pressable
+              onPress={() => setLiveOnly((v) => !v)}
+              accessibilityRole="switch"
+              accessibilityState={{ checked: liveOnly }}
+              style={[styles.liveToggle, { backgroundColor: liveOnly ? colors.live : 'transparent', borderColor: colors.live }]}>
+              <View style={[styles.liveDot, { backgroundColor: liveOnly ? '#fff' : colors.live }]} />
+              <AppText variant="label" color={liveOnly ? '#fff' : colors.text} style={{ fontSize: 10 }}>
+                En vivo
+              </AppText>
+            </Pressable>
+          )}
           <NotificationsBell />
           <Pressable onPress={() => router.navigate('/profile')} accessibilityLabel="Perfil">
             <Avatar uri={user.avatarUrl} name={user.username} size={32} />
           </Pressable>
         </View>
+
+        <SegmentedControl options={WHEN_OPTIONS} value={when} onChange={changeWhen} style={{ marginLeft: Spacing.three }} />
 
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>
           <Chip label="Todo" active={!category} onPress={() => setCategory(undefined)} />
@@ -129,9 +157,11 @@ export default function MapScreen() {
           <View style={styles.sheetHeader}>
             <Pressable onPress={sheet.toggle} style={styles.sheetTitle}>
               <View>
-                <AppText variant="heading">Eventos cercanos</AppText>
+                <AppText variant="heading">{when === 'today' ? 'Eventos de hoy' : 'Próximos eventos'}</AppText>
                 <AppText variant="label" color={colors.textMuted} style={{ marginTop: 2 }}>
-                  {nearby.loading ? 'Buscando…' : `${cards.length} eventos encontrados`}
+                  {nearby.loading
+                    ? 'Buscando…'
+                    : `${cards.length} ${cards.length === 1 ? 'evento' : 'eventos'}${when === 'upcoming' ? ` · ${UPCOMING_DAYS} días` : ''}`}
                 </AppText>
               </View>
               <Animated.View style={sheet.chevronStyle}>
@@ -151,12 +181,24 @@ export default function MapScreen() {
           </AppText>
         ) : cards.length === 0 && !nearby.loading ? (
           <View style={{ paddingHorizontal: Spacing.four, gap: Spacing.two }}>
-            <AppText variant="caption">No hay eventos en {RADIUS_KM} km con estos filtros.</AppText>
-            <Pressable onPress={() => router.push('/create-event')}>
-              <AppText variant="bodyStrong" color={colors.primary}>
-                + Crea el primero
-              </AppText>
-            </Pressable>
+            <AppText variant="caption">
+              {when === 'today'
+                ? `No hay más eventos hoy a menos de ${RADIUS_KM} km con estos filtros.`
+                : `No hay eventos en los próximos ${UPCOMING_DAYS} días a menos de ${RADIUS_KM} km.`}
+            </AppText>
+            {when === 'today' ? (
+              <Pressable onPress={() => changeWhen('upcoming')}>
+                <AppText variant="bodyStrong" color={colors.primary}>
+                  Ver próximos eventos →
+                </AppText>
+              </Pressable>
+            ) : (
+              <Pressable onPress={() => router.push('/create-event')}>
+                <AppText variant="bodyStrong" color={colors.primary}>
+                  + Crea el primero
+                </AppText>
+              </Pressable>
+            )}
           </View>
         ) : (
           <FlatList

@@ -274,7 +274,7 @@ export default function EventDetailScreen() {
             <View style={styles.mapBox}>
               <EventMap
                 center={{ lat: event.location.latitude, lng: event.location.longitude }}
-                pins={[{ id: event.id, latitude: event.location.latitude, longitude: event.location.longitude, category: event.category, status: event.status, currentAttendees: 0, title: event.title }]}
+                pins={[{ id: event.id, latitude: event.location.latitude, longitude: event.location.longitude, category: event.category, status: event.status, currentAttendees: 0, title: event.title, startAt: event.startAt, endAt: event.endAt }]}
                 radiusKm={0.8}
                 interactive={false}
               />

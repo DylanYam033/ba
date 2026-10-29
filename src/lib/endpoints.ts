@@ -23,6 +23,12 @@ export interface Coords {
   lng: number;
 }
 
+/** ISO `[from, to)` range, see `timeWindow` in lib/format. */
+export interface TimeWindow {
+  from: string;
+  to: string;
+}
+
 export const authApi = {
   login: (email: string, password: string) =>
     api<Tokens>('/auth/login', { method: 'POST', body: { email, password } }),
@@ -33,14 +39,27 @@ export const authApi = {
 };
 
 export const eventsApi = {
-  nearby: (c: Coords, opts: { radiusKm?: number; category?: EventCategory; status?: string; limit?: number } = {}) =>
+  /** `from`/`to` (ISO) keep only upcoming or live events overlapping that window. */
+  nearby: (
+    c: Coords,
+    opts: { radiusKm?: number; category?: EventCategory; status?: string; limit?: number } & Partial<TimeWindow> = {},
+  ) =>
     api<Paginated<NearbyEvent>>('/events', {
-      query: { lat: c.lat, lng: c.lng, radiusKm: opts.radiusKm ?? 25, category: opts.category, status: opts.status, limit: opts.limit ?? 20 },
+      query: {
+        lat: c.lat,
+        lng: c.lng,
+        radiusKm: opts.radiusKm ?? 25,
+        category: opts.category,
+        status: opts.status,
+        limit: opts.limit ?? 20,
+        from: opts.from,
+        to: opts.to,
+      },
     }),
   trending: (c: Coords, radiusKm = 25, limit = 10) =>
     api<NearbyEvent[]>('/events/trending', { query: { lat: c.lat, lng: c.lng, radiusKm, limit } }),
-  mapPins: (c: Coords, radiusKm = 25, category?: EventCategory) =>
-    api<MapPin[]>('/events/map-pins', { query: { lat: c.lat, lng: c.lng, radiusKm, category } }),
+  mapPins: (c: Coords, radiusKm = 25, category?: EventCategory, window?: TimeWindow) =>
+    api<MapPin[]>('/events/map-pins', { query: { lat: c.lat, lng: c.lng, radiusKm, category, from: window?.from, to: window?.to } }),
   get: (id: string) => api<EventDetail>(`/events/${id}`),
   create: (input: CreateEventInput) => api<EventDetail>('/events', { method: 'POST', body: input }),
   update: (id: string, body: Partial<Pick<EventSummary, 'status' | 'title' | 'description'>>) =>

@@ -81,6 +81,8 @@ export interface MapPin {
   status: EventStatus;
   currentAttendees: number;
   title: string;
+  startAt: string;
+  endAt: string;
 }
 
 export interface Attendee {
