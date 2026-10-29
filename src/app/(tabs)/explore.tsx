@@ -8,14 +8,13 @@ import { Icon } from '@/components/icon';
 import { TopBar } from '@/components/top-bar';
 import { EmptyState, ErrorState, glow, LoadingState, SectionHeader, SegmentedControl } from '@/components/ui';
 import { MaxContentWidth, Spacing, TabBarHeight } from '@/constants/theme';
+import { usePreferences } from '@/ctx/preferences';
 import { useAppTheme } from '@/ctx/theme';
 import { useQuery } from '@/hooks/use-query';
 import { useUserLocation } from '@/hooks/use-user-location';
 import { eventsApi } from '@/lib/endpoints';
 import { formatDayHeading, hasEnded, isLive, timeWindow, UPCOMING_DAYS, type When } from '@/lib/format';
 import type { NearbyEvent } from '@/lib/types';
-
-const RADIUS_KM = 25;
 
 const TABS: { value: When; label: string }[] = [
   { value: 'today', label: 'Hoy' },
@@ -25,6 +24,7 @@ const TABS: { value: When; label: string }[] = [
 export default function Explore() {
   const { colors } = useAppTheme();
   const { coords } = useUserLocation();
+  const { radiusKm } = usePreferences();
   const [tab, setTab] = useState<When>('today');
   const range = timeWindow(tab);
 
@@ -33,13 +33,13 @@ export default function Explore() {
       ? async () => {
           const [trending, nearby] = await Promise.all([
             // Trending ranks the last 2 hours of joins, which only means something for today.
-            tab === 'today' ? eventsApi.trending(coords, RADIUS_KM, 5) : Promise.resolve([]),
-            eventsApi.nearby(coords, { radiusKm: RADIUS_KM, limit: 50, ...range }),
+            tab === 'today' ? eventsApi.trending(coords, radiusKm, 5) : Promise.resolve([]),
+            eventsApi.nearby(coords, { radiusKm, limit: 50, ...range }),
           ]);
           return { trending, nearby: nearby.data };
         }
       : null,
-    [coords, tab, range.from],
+    [coords, tab, range.from, radiusKm],
   );
 
   const nearby = (feed.data?.nearby ?? [])
@@ -72,7 +72,7 @@ export default function Explore() {
                 <EmptyState
                   icon="explore"
                   title="Nada más por hoy"
-                  message={`No quedan eventos hoy a menos de ${RADIUS_KM} km. Mira lo que viene esta semana.`}
+                  message={`No quedan eventos hoy a menos de ${radiusKm} km. Mira lo que viene esta semana.`}
                   action="Ver próximos"
                   onAction={() => setTab('upcoming')}
                 />
@@ -109,7 +109,7 @@ export default function Explore() {
             <EmptyState
               icon="calendar"
               title="Semana tranquila"
-              message={`No hay eventos en los próximos ${UPCOMING_DAYS} días a menos de ${RADIUS_KM} km. ¡Sé el primero en publicar uno!`}
+              message={`No hay eventos en los próximos ${UPCOMING_DAYS} días a menos de ${radiusKm} km. ¡Sé el primero en publicar uno!`}
               action="Crear evento"
               onAction={() => router.push('/create-event')}
             />

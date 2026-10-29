@@ -17,6 +17,7 @@ import { useEffect } from 'react';
 
 import { AuthProvider, useAuth } from '@/ctx/auth';
 import { NotificationsProvider } from '@/ctx/notifications';
+import { PreferencesProvider } from '@/ctx/preferences';
 import { SocketProvider } from '@/ctx/socket';
 import { AppThemeProvider, useAppTheme } from '@/ctx/theme';
 
@@ -35,13 +36,15 @@ export default function RootLayout() {
 
   return (
     <AppThemeProvider>
-      <AuthProvider>
-        <SocketProvider>
-          <NotificationsProvider>
-            <RootNavigator ready={fontsLoaded} />
-          </NotificationsProvider>
-        </SocketProvider>
-      </AuthProvider>
+      <PreferencesProvider>
+        <AuthProvider>
+          <SocketProvider>
+            <NotificationsProvider>
+              <RootNavigator ready={fontsLoaded} />
+            </NotificationsProvider>
+          </SocketProvider>
+        </AuthProvider>
+      </PreferencesProvider>
     </AppThemeProvider>
   );
 }

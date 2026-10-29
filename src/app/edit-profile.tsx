@@ -5,9 +5,10 @@ import { ActivityIndicator, KeyboardAvoidingView, Pressable, ScrollView, StyleSh
 import { Avatar } from '@/components/event-cards';
 import { Icon } from '@/components/icon';
 import { TopBar, BackButton } from '@/components/top-bar';
-import { AppText, GhostButton, glow, GradientButton, TextField } from '@/components/ui';
-import { MaxContentWidth, Spacing } from '@/constants/theme';
+import { AppText, Chip, GhostButton, glow, GradientButton, TextField } from '@/components/ui';
+import { MaxContentWidth, Radius, Spacing } from '@/constants/theme';
 import { useAuth, useCurrentUser } from '@/ctx/auth';
+import { RADIUS_OPTIONS, usePreferences } from '@/ctx/preferences';
 import { useAppTheme } from '@/ctx/theme';
 import { ApiError } from '@/lib/api';
 import { usersApi } from '@/lib/endpoints';
@@ -16,6 +17,7 @@ import { pickImage } from '@/lib/pick-image';
 export default function EditProfile() {
   const { colors, scheme, toggle } = useAppTheme();
   const { setUser } = useAuth();
+  const { radiusKm, setRadiusKm } = usePreferences();
   const user = useCurrentUser();
   const [username, setUsername] = useState(user.username);
   const [bio, setBio] = useState(user.bio ?? '');
@@ -104,6 +106,21 @@ export default function EditProfile() {
             style={{ minHeight: 110, textAlignVertical: 'top' }}
           />
           <AppText variant="caption">El correo ({user.email}) no se puede cambiar desde la app.</AppText>
+
+          {/* Device preference: applies right away, independent of "Guardar cambios". */}
+          <View style={[styles.prefs, { backgroundColor: colors.surfaceContainer }]}>
+            <View style={{ gap: 2 }}>
+              <AppText variant="label">Distancia de búsqueda</AppText>
+              <AppText variant="caption">
+                Mostrar eventos a menos de {radiusKm} km de ti en el mapa y en Explorar.
+              </AppText>
+            </View>
+            <View style={styles.radiusRow}>
+              {RADIUS_OPTIONS.map((km) => (
+                <Chip key={km} label={`${km} km`} active={radiusKm === km} onPress={() => setRadiusKm(km)} />
+              ))}
+            </View>
+          </View>
           {error && (
             <AppText variant="caption" color={colors.error}>
               {error}
@@ -122,6 +139,8 @@ export default function EditProfile() {
 const styles = StyleSheet.create({
   content: { padding: Spacing.four, gap: Spacing.four, width: '100%', maxWidth: MaxContentWidth, alignSelf: 'center' },
   avatar: { alignSelf: 'center', borderRadius: 60, marginVertical: Spacing.three },
+  prefs: { padding: Spacing.three, borderRadius: Radius.md, gap: Spacing.three },
+  radiusRow: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.two },
   avatarOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, borderRadius: 60, alignItems: 'center', justifyContent: 'center' },
   cameraBadge: {
     position: 'absolute',

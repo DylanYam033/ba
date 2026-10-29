@@ -11,6 +11,7 @@ import { NotificationsBell } from '@/components/top-bar';
 import { AppText, Chip, glow, SegmentedControl } from '@/components/ui';
 import { Fonts, Radius, Spacing, TabBarHeight } from '@/constants/theme';
 import { useCurrentUser } from '@/ctx/auth';
+import { usePreferences } from '@/ctx/preferences';
 import { useAppTheme } from '@/ctx/theme';
 import { useDebouncedValue } from '@/hooks/use-debounced-value';
 import { useQuery } from '@/hooks/use-query';
@@ -20,8 +21,6 @@ import { eventsApi, type Coords } from '@/lib/endpoints';
 import { hasEnded, isLive, timeWindow, UPCOMING_DAYS, type When } from '@/lib/format';
 import { searchTerms } from '@/lib/search';
 import type { EventCategory, MapPin } from '@/lib/types';
-
-const RADIUS_KM = 25;
 
 const WHEN_OPTIONS: { value: When; label: string }[] = [
   { value: 'today', label: 'Hoy' },
@@ -33,6 +32,7 @@ export default function MapScreen() {
   const user = useCurrentUser();
   const insets = useSafeAreaInsets();
   const { coords, locate } = useUserLocation();
+  const { radiusKm } = usePreferences();
   const [category, setCategory] = useState<EventCategory | undefined>();
   const [liveOnly, setLiveOnly] = useState(false);
   const [search, setSearch] = useState('');
@@ -49,8 +49,8 @@ export default function MapScreen() {
   const searchFrom = timeWindow('today').from;
 
   const pins = useQuery(
-    coords && !searching ? () => eventsApi.mapPins(coords, RADIUS_KM, category, range) : null,
-    [coords, category, range.from, searching],
+    coords && !searching ? () => eventsApi.mapPins(coords, radiusKm, category, range) : null,
+    [coords, category, range.from, searching, radiusKm],
   );
   const nearby = useQuery(
     coords
@@ -58,11 +58,11 @@ export default function MapScreen() {
           eventsApi.nearby(
             coords,
             searching
-              ? { radiusKm: RADIUS_KM, category, limit: 50, from: searchFrom, q: query }
-              : { radiusKm: RADIUS_KM, category, limit: 50, ...range },
+              ? { radiusKm, category, limit: 50, from: searchFrom, q: query }
+              : { radiusKm, category, limit: 50, ...range },
           )
       : null,
-    [coords, category, range.from, searching ? query : '', searchFrom],
+    [coords, category, range.from, searching ? query : '', searchFrom, radiusKm],
   );
 
   // Windows start at midnight, so drop today's events that already ended.
@@ -210,10 +210,10 @@ export default function MapScreen() {
           <View style={{ paddingHorizontal: Spacing.four, gap: Spacing.two }}>
             <AppText variant="caption">
               {searching
-                ? `Nada coincide con “${query}” a menos de ${RADIUS_KM} km. Prueba con otra palabra o categoría.`
+                ? `Nada coincide con “${query}” a menos de ${radiusKm} km. Prueba con otra palabra o categoría.`
                 : when === 'today'
-                  ? `No hay más eventos hoy a menos de ${RADIUS_KM} km con estos filtros.`
-                  : `No hay eventos en los próximos ${UPCOMING_DAYS} días a menos de ${RADIUS_KM} km.`}
+                  ? `No hay más eventos hoy a menos de ${radiusKm} km con estos filtros.`
+                  : `No hay eventos en los próximos ${UPCOMING_DAYS} días a menos de ${radiusKm} km.`}
             </AppText>
             {searching ? null : when === 'today' ? (
               <Pressable onPress={() => changeWhen('upcoming')}>
