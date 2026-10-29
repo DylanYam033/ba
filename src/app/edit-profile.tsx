@@ -5,7 +5,7 @@ import { ActivityIndicator, KeyboardAvoidingView, Pressable, ScrollView, StyleSh
 import { Avatar } from '@/components/event-cards';
 import { Icon } from '@/components/icon';
 import { TopBar, BackButton } from '@/components/top-bar';
-import { AppText, Chip, GhostButton, glow, GradientButton, TextField } from '@/components/ui';
+import { AppText, Chip, GhostButton, glow, GradientButton, IconButton, TextField } from '@/components/ui';
 import { MaxContentWidth, Radius, Spacing } from '@/constants/theme';
 import { useAuth, useCurrentUser } from '@/ctx/auth';
 import { RADIUS_OPTIONS, usePreferences } from '@/ctx/preferences';
@@ -67,11 +67,7 @@ export default function EditProfile() {
         title="Editar perfil"
         left={<BackButton />}
         right={
-          <Pressable onPress={toggle} accessibilityLabel="Cambiar tema">
-            <AppText variant="bodyStrong" color={colors.primary}>
-              {scheme === 'dark' ? 'Claro' : 'Oscuro'}
-            </AppText>
-          </Pressable>
+          <IconButton icon={scheme === 'dark' ? 'lightMode' : 'darkMode'} label="Cambiar tema" onPress={toggle} color={colors.secondary} />
         }
       />
       <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
