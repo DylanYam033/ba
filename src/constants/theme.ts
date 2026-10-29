@@ -26,8 +26,9 @@ const dark = {
   outline: '#9b8c9e',
   outlineVariant: '#4f4352',
   error: '#ffb4ab',
-  brandStart: '#BF5AF2',
-  brandEnd: '#a2e7ff',
+  // BIBING brand gradient (mascot / logo): magenta → cyan.
+  brandStart: '#E94FFC',
+  brandEnd: '#5CE8FB',
   overlay: 'rgba(14, 14, 19, 0.85)',
 };
 
@@ -54,8 +55,9 @@ const light: Palette = {
   outline: '#75777b',
   outlineVariant: '#acadb1',
   error: '#b41340',
-  brandStart: '#6C3FD6',
-  brandEnd: '#ac8eff',
+  // BIBING violet reads better than magenta on white.
+  brandStart: '#8044FB',
+  brandEnd: '#C34BEA',
   overlay: 'rgba(255, 255, 255, 0.9)',
 };
 

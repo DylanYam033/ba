@@ -101,7 +101,7 @@ export default function EventDetailScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
       <ScrollView contentContainerStyle={{ paddingBottom: insets.bottom + Spacing.six }}>
-        <EventCover uri={event.coverUrl} category={event.category} style={{ height: 380 }} emojiSize={96} />
+        <EventCover uri={event.coverUrl} category={event.category} style={{ height: 380 }} iconSize={220} />
 
         <View style={styles.body}>
           <View style={{ gap: Spacing.three }}>

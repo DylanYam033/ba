@@ -1,3 +1,4 @@
+import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useState, type ReactNode } from 'react';
 import {
@@ -46,15 +47,23 @@ export function AppText({
   return <Text style={[variantStyle[variant], { color: color ?? fallback }, style]} {...rest} />;
 }
 
-/** "BIBING" wordmark with the brand gradient. */
+const WORDMARK = {
+  dark: { source: require('@/assets/images/Bibing_logo_tema_oscuro.png'), ratio: 852 / 212 },
+  light: { source: require('@/assets/images/Bibing_logo_tema_claro.png'), ratio: 808 / 212 },
+};
+
+/** "BIBING" wordmark image per theme; `size` keeps the old font-size scale. */
 export function BrandMark({ size = 24 }: { size?: number }) {
-  const { colors } = useAppTheme();
-  // Gradient text needs masked views; a two-tone wordmark keeps it dependency-free.
+  const { scheme } = useAppTheme();
+  const { source, ratio } = WORDMARK[scheme];
+  const height = Math.round(size * 1.3);
   return (
-    <Text style={{ fontFamily: Fonts.headlineBlack, fontSize: size, letterSpacing: -0.8 }}>
-      <Text style={{ color: colors.brandStart }}>BIB</Text>
-      <Text style={{ color: colors.brandEnd }}>ING</Text>
-    </Text>
+    <Image
+      source={source}
+      accessibilityLabel="BIBING"
+      contentFit="contain"
+      style={{ height, width: height * ratio }}
+    />
   );
 }
 

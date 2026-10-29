@@ -53,7 +53,7 @@ export function FeaturedEventCard({ event }: { event: CardEvent }) {
       onPress={() => open(event.id)}
       style={({ pressed }) => [styles.card, { backgroundColor: colors.surfaceContainer, transform: [{ scale: pressed ? 0.98 : 1 }] }]}>
       <View>
-        <EventCover uri={event.coverUrl} category={event.category} style={{ height: 220 }} emojiSize={72} />
+        <EventCover uri={event.coverUrl} category={event.category} style={{ height: 220 }} iconSize={150} />
         <View style={styles.overlayRow}>
           <CategoryBadge category={event.category} />
           {distance && (
@@ -106,7 +106,7 @@ export function RowEventCard({ event, dimmed }: { event: CardEvent; dimmed?: boo
         styles.row,
         { backgroundColor: colors.surfaceContainer, opacity: dimmed ? 0.7 : 1, transform: [{ scale: pressed ? 0.98 : 1 }] },
       ]}>
-      <EventCover uri={event.coverUrl} category={event.category} style={styles.rowCover} fade={false} emojiSize={40} />
+      <EventCover uri={event.coverUrl} category={event.category} style={styles.rowCover} fade={false} iconSize={64} />
       <View style={styles.rowBody}>
         <View style={styles.metaRow}>
           <AppText variant="label" color={live ? colors.tertiary : meta.color} style={{ fontSize: 10, flex: 1 }}>

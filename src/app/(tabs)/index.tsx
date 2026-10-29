@@ -102,7 +102,7 @@ export default function MapScreen() {
       </View>
 
       {/* Locate me — rides along with the sheet */}
-      <Animated.View style={[styles.fab, { bottom: TabBarHeight + 290 }, sheet.followStyle]}>
+      <Animated.View style={[styles.fab, { bottom: sheet.height + Spacing.three }, sheet.followStyle]}>
         <Pressable
           accessibilityLabel="Mi ubicación"
           onPress={async () => setCenter(await locate())}
@@ -177,6 +177,8 @@ export default function MapScreen() {
  */
 function useCollapsibleSheet() {
   const [open, setOpenState] = useState(true);
+  // Rendered height, so siblings (the locate FAB) can sit right above the sheet.
+  const [height, setHeight] = useState(TabBarHeight + 290);
   const offset = useSharedValue(0);
   const closedOffset = useSharedValue(0);
   const sheetHeight = useRef(0);
@@ -218,6 +220,7 @@ function useCollapsibleSheet() {
 
   return {
     open,
+    height,
     setOpen,
     toggle: () => setOpen(!open),
     panHandlers: panResponder.panHandlers,
@@ -225,6 +228,7 @@ function useCollapsibleSheet() {
     chevronStyle,
     onSheetLayout: (e: { nativeEvent: { layout: { height: number } } }) => {
       sheetHeight.current = e.nativeEvent.layout.height;
+      setHeight(e.nativeEvent.layout.height);
       recalc();
     },
     onGrabberLayout: (e: { nativeEvent: { layout: { y: number; height: number } } }) => {
