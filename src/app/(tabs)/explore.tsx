@@ -6,14 +6,16 @@ import { Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-n
 import { FeaturedEventCard, RowEventCard } from '@/components/event-cards';
 import { Icon } from '@/components/icon';
 import { TopBar } from '@/components/top-bar';
-import { EmptyState, ErrorState, glow, LoadingState, SectionHeader, SegmentedControl } from '@/components/ui';
+import { EmptyState, ErrorState, glow, LoadingState, SearchField, SectionHeader, SegmentedControl } from '@/components/ui';
 import { MaxContentWidth, Spacing, TabBarHeight } from '@/constants/theme';
 import { usePreferences } from '@/ctx/preferences';
 import { useAppTheme } from '@/ctx/theme';
+import { useDebouncedValue } from '@/hooks/use-debounced-value';
 import { useQuery } from '@/hooks/use-query';
 import { useUserLocation } from '@/hooks/use-user-location';
 import { eventsApi } from '@/lib/endpoints';
 import { formatDayHeading, hasEnded, isLive, timeWindow, UPCOMING_DAYS, type When } from '@/lib/format';
+import { searchTerms } from '@/lib/search';
 import type { NearbyEvent } from '@/lib/types';
 
 const TABS: { value: When; label: string }[] = [
@@ -26,11 +28,20 @@ export default function Explore() {
   const { coords } = useUserLocation();
   const { radiusKm } = usePreferences();
   const [tab, setTab] = useState<When>('today');
+  const [search, setSearch] = useState('');
   const range = timeWindow(tab);
+  // Same as the map: a search covers every event from today on, ignoring the tab.
+  const query = useDebouncedValue(search.trim());
+  const searching = searchTerms(query).length > 0;
+  const searchFrom = timeWindow('today').from;
 
   const feed = useQuery(
     coords
       ? async () => {
+          if (searching) {
+            const results = await eventsApi.nearby(coords, { radiusKm, limit: 50, from: searchFrom, q: query });
+            return { trending: [], nearby: results.data };
+          }
           const [trending, nearby] = await Promise.all([
             // Trending ranks the last 2 hours of joins, which only means something for today.
             tab === 'today' ? eventsApi.trending(coords, radiusKm, 5) : Promise.resolve([]),
@@ -39,7 +50,7 @@ export default function Explore() {
           return { trending, nearby: nearby.data };
         }
       : null,
-    [coords, tab, range.from, radiusKm],
+    [coords, tab, range.from, radiusKm, searching ? query : '', searchFrom],
   );
 
   const nearby = (feed.data?.nearby ?? [])
@@ -55,8 +66,9 @@ export default function Explore() {
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
       <TopBar />
-      <View style={styles.tabs}>
-        <SegmentedControl options={TABS} value={tab} onChange={setTab} />
+      <View style={styles.header}>
+        <SearchField value={search} onChangeText={setSearch} />
+        {!searching && <SegmentedControl options={TABS} value={tab} onChange={setTab} />}
       </View>
       {feed.loading || !coords ? (
         <LoadingState />
@@ -65,8 +77,31 @@ export default function Explore() {
       ) : (
         <ScrollView
           contentContainerStyle={styles.content}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
           refreshControl={<RefreshControl refreshing={feed.refreshing} onRefresh={feed.refresh} tintColor={colors.secondary} />}>
-          {tab === 'today' ? (
+          {searching ? (
+            nearby.length === 0 ? (
+              <EmptyState
+                icon="search"
+                title="Sin resultados"
+                message={`Nada coincide con “${query}” a menos de ${radiusKm} km. Prueba con otra palabra, categoría, lugar o etiqueta.`}
+              />
+            ) : (
+              groupByDay(nearby).map(([day, events]) => (
+                <View key={day} style={styles.section}>
+                  <SectionHeader
+                    eyebrow={`${events.length} ${events.length === 1 ? 'resultado' : 'resultados'}`}
+                    eyebrowColor={colors.primary}
+                    title={day}
+                  />
+                  {events.map((e) => (
+                    <RowEventCard key={e.id} event={e} />
+                  ))}
+                </View>
+              ))
+            )
+          ) : tab === 'today' ? (
             <>
               {nearby.length === 0 && trending.length === 0 && (
                 <EmptyState
@@ -153,7 +188,7 @@ function groupByDay(events: NearbyEvent[]) {
 }
 
 const styles = StyleSheet.create({
-  tabs: { paddingHorizontal: Spacing.three, paddingTop: Spacing.two, width: '100%', maxWidth: MaxContentWidth, alignSelf: 'center' },
+  header: { paddingHorizontal: Spacing.three, paddingTop: Spacing.two, gap: Spacing.three, width: '100%', maxWidth: MaxContentWidth, alignSelf: 'center' },
   content: {
     paddingHorizontal: Spacing.three,
     paddingTop: Spacing.four,

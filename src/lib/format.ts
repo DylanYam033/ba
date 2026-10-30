@@ -73,11 +73,13 @@ export function timeWindow(when: When, now = new Date()) {
   return { from: from.toISOString(), to: to.toISOString() };
 }
 
-/** Day heading for upcoming lists: "Mañana" or "Sábado 31 de octubre". */
+/** Day heading for event lists: "Hoy", "Mañana" or "Sábado 31 de octubre". */
 export function formatDayHeading(iso: string, now = new Date()) {
   const d = new Date(iso);
   const tomorrow = new Date(now);
   tomorrow.setDate(tomorrow.getDate() + 1);
+  // Live events that started on an earlier day still belong under "Hoy".
+  if (d <= now || d.toDateString() === now.toDateString()) return 'Hoy';
   if (d.toDateString() === tomorrow.toDateString()) return 'Mañana';
   const day = d.toLocaleDateString(LOCALE, { weekday: 'long', day: 'numeric', month: 'long' });
   return `${day.charAt(0).toUpperCase()}${day.slice(1)}`;

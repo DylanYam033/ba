@@ -179,7 +179,7 @@ interface FieldProps extends TextInputProps {
 }
 
 /** Filled field whose bottom edge lights up with the neon gradient on focus. */
-export function TextField({ label, error, right, style, ...rest }: FieldProps) {
+export function TextField({ label, error, right, style, onFocus, onBlur, ...rest }: FieldProps) {
   const { colors } = useAppTheme();
   const [focused, setFocused] = useState(false);
   return (
@@ -192,15 +192,15 @@ export function TextField({ label, error, right, style, ...rest }: FieldProps) {
           placeholderTextColor={colors.textMuted}
           selectionColor={colors.primary}
           style={[styles.input, { color: colors.text }, Platform.OS === 'web' && styles.webInput, style]}
+          {...rest}
           onFocus={(e) => {
             setFocused(true);
-            rest.onFocus?.(e);
+            onFocus?.(e);
           }}
           onBlur={(e) => {
             setFocused(false);
-            rest.onBlur?.(e);
+            onBlur?.(e);
           }}
-          {...rest}
         />
         {right}
         {focused && (
@@ -217,6 +217,41 @@ export function TextField({ label, error, right, style, ...rest }: FieldProps) {
           {error}
         </AppText>
       ) : null}
+    </View>
+  );
+}
+
+/** Pill search input (glass, like the map's) with a clear button once there's text. */
+export function SearchField({
+  value,
+  onChangeText,
+  placeholder = 'Encuentra eventos...',
+  style,
+}: {
+  value: string;
+  onChangeText: (text: string) => void;
+  placeholder?: string;
+  style?: StyleProp<ViewStyle>;
+}) {
+  const { colors } = useAppTheme();
+  return (
+    <View style={[styles.searchField, { backgroundColor: colors.glass }, style]}>
+      <Icon name="search" size={20} color={colors.textMuted} />
+      <TextInput
+        value={value}
+        onChangeText={onChangeText}
+        placeholder={placeholder}
+        placeholderTextColor={colors.textMuted}
+        selectionColor={colors.primary}
+        returnKeyType="search"
+        autoCorrect={false}
+        style={[styles.searchInput, { color: colors.text }, Platform.OS === 'web' && styles.webInput]}
+      />
+      {value.length > 0 && (
+        <Pressable onPress={() => onChangeText('')} hitSlop={10} accessibilityRole="button" accessibilityLabel="Borrar búsqueda">
+          <Icon name="close" size={18} color={colors.textMuted} />
+        </Pressable>
+      )}
     </View>
   );
 }
@@ -425,6 +460,15 @@ const styles = StyleSheet.create({
   input: { flex: 1, fontFamily: Fonts.body, fontSize: 16, paddingHorizontal: 20, paddingVertical: 16 },
   webInput: { outlineStyle: 'none' } as object,
   focusLine: { position: 'absolute', left: 0, right: 0, bottom: 0, height: 2 },
+  searchField: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two + 4,
+    paddingHorizontal: Spacing.three,
+    paddingVertical: 6,
+    borderRadius: Radius.full,
+  },
+  searchInput: { flex: 1, fontFamily: Fonts.body, fontSize: 15, paddingVertical: 6 },
   chip: {
     flexDirection: 'row',
     alignItems: 'center',
