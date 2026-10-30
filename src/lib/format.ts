@@ -26,8 +26,26 @@ export function formatDistance(km?: number) {
   return km < 1 ? `${Math.round(km * 1000)} M` : `${km.toFixed(1)} KM`;
 }
 
+const COMPACT_UNITS = [
+  [1e9, 'B'],
+  [1e6, 'M'],
+  [1e3, 'k'],
+] as const;
+
+/**
+ * Social-style counters: 999 → "999", 1 234 → "1.2k", 15 400 → "15k", 2 500 000 → "2.5M".
+ * Truncates instead of rounding, so 999 999 reads "999k" rather than "1000k".
+ */
 export function compactNumber(n: number) {
-  return n >= 1000 ? `${(n / 1000).toFixed(n >= 10000 ? 0 : 1)}k` : String(n);
+  for (const [size, suffix] of COMPACT_UNITS) {
+    if (n >= size) {
+      const value = n / size;
+      // One decimal only below 10 (1.2k, 9.9M); whole numbers above (15k, 120M).
+      const shown = value < 10 ? Math.floor(value * 10) / 10 : Math.floor(value);
+      return `${shown}${suffix}`;
+    }
+  }
+  return String(n);
 }
 
 export function hasEnded(e: Pick<EventSummary, 'status' | 'endAt'>) {

@@ -2,6 +2,7 @@ import { router } from 'expo-router';
 import { Alert, Platform, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 
 import { RowEventCard } from '@/components/event-cards';
+import { OrganizedEvents } from '@/components/organized-events';
 import { ProfileHero, StatCard } from '@/components/profile-header';
 import { NotificationsBell, TopBar } from '@/components/top-bar';
 import { EmptyState, GhostButton, GradientButton, IconButton, SectionHeader } from '@/components/ui';
@@ -18,8 +19,12 @@ export default function Profile() {
   const isBusiness = user.accountType === 'business';
 
   const data = useQuery(async () => {
-    const [stats, saved] = await Promise.all([usersApi.stats(user.id), usersApi.myEvents('saved')]);
-    return { stats, saved };
+    const [stats, saved, created] = await Promise.all([
+      usersApi.stats(user.id),
+      usersApi.myEvents('saved'),
+      usersApi.events(user.id),
+    ]);
+    return { stats, saved, created };
   }, [user.id]);
 
   const confirmSignOut = () => {
@@ -35,6 +40,7 @@ export default function Profile() {
 
   const stats = data.data?.stats;
   const saved = data.data?.saved ?? [];
+  const created = data.data?.created ?? [];
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
@@ -54,6 +60,19 @@ export default function Profile() {
         <View style={styles.statGrid}>
           <StatCard label="Eventos asistidos" value={stats?.eventsAttended} icon="ticket" color={colors.primary} />
           <StatCard label="Fotos compartidas" value={stats?.photosShared} icon="photos" color={colors.secondary} />
+        </View>
+
+        <View style={{ gap: Spacing.three }}>
+          <SectionHeader title="Mis eventos creados" />
+          {data.loading ? null : (
+            <OrganizedEvents
+              events={created}
+              emptyTitle="Aún no has creado eventos"
+              emptyMessage="Publica tu primer evento y aparecerá aquí."
+              emptyAction="Crear evento"
+              onEmptyAction={() => router.push('/create-event')}
+            />
+          )}
         </View>
 
         <View style={{ gap: Spacing.three }}>

@@ -103,7 +103,7 @@ export default function MapScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.surface }}>
-      <EventMap center={center} pins={visiblePins} selectedId={selectedId} onSelectPin={selectPin} radiusKm={6} />
+      <EventMap center={center} pins={visiblePins} selectedId={selectedId} onSelectPin={selectPin} radiusKm={radiusKm} />
 
       {/* Search + live toggle + avatar */}
       <View style={[styles.top, { paddingTop: insets.top + Spacing.two }]} pointerEvents="box-none">

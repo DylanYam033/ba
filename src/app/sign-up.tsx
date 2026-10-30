@@ -1,4 +1,5 @@
 import { router } from 'expo-router';
+import { useFormik } from 'formik';
 import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
@@ -8,8 +9,7 @@ import { AppText, GradientButton, TextField } from '@/components/ui';
 import { Radius, Spacing } from '@/constants/theme';
 import { useAuth } from '@/ctx/auth';
 import { useAppTheme } from '@/ctx/theme';
-
-type AccountType = 'user' | 'business';
+import { signUpSchema, type AccountType, type SignUpValues } from '@/lib/user-form';
 
 const ACCOUNT_TYPES: { value: AccountType; label: string; hint: string; icon: IconName }[] = [
   { value: 'user', label: 'Personal', hint: 'Descubre y asiste', icon: 'person' },
@@ -19,35 +19,31 @@ const ACCOUNT_TYPES: { value: AccountType; label: string; hint: string; icon: Ic
 export default function SignUp() {
   const { colors } = useAppTheme();
   const { signUp } = useAuth();
-  const [form, setForm] = useState({ username: '', email: '', password: '' });
-  const [accountType, setAccountType] = useState<AccountType>('user');
-  const [errors, setErrors] = useState<Partial<Record<keyof typeof form | 'form', string>>>({});
-  const [loading, setLoading] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
-  const set = (key: keyof typeof form) => (value: string) => setForm((f) => ({ ...f, [key]: value }));
-
-  // Mirrors RegisterDto validation in eventspot-api.
-  const validate = () => {
-    const next: typeof errors = {};
-    if (!/^[a-zA-Z0-9_.]{3,50}$/.test(form.username)) next.username = 'De 3 a 50 caracteres: letras, números, _ o .';
-    if (!/^\S+@\S+\.\S+$/.test(form.email)) next.email = 'Ingresa un correo válido.';
-    if (form.password.length < 8) next.password = 'Mínimo 8 caracteres.';
-    setErrors(next);
-    return Object.keys(next).length === 0;
-  };
-
-  const submit = async () => {
-    if (!validate()) return;
-    setLoading(true);
-    try {
-      await signUp({ ...form, accountType });
-    } catch (e) {
-      if (__DEV__) console.warn('[sign-up]', e);
-      setErrors({ form: (e as Error).message === 'Email or username already in use' ? 'Ese correo o usuario ya está en uso.' : (e as Error).message });
-    } finally {
-      setLoading(false);
-    }
-  };
+  const form = useFormik<SignUpValues>({
+    initialValues: { username: '', email: '', password: '', accountType: 'user' },
+    validationSchema: signUpSchema,
+    onSubmit: async (v) => {
+      setSubmitError(null);
+      try {
+        await signUp({ ...v, username: v.username.trim(), email: v.email.trim() });
+      } catch (e) {
+        if (__DEV__) console.warn('[sign-up]', e);
+        const message = (e as Error).message;
+        setSubmitError(message === 'Email or username already in use' ? 'Ese correo o usuario ya está en uso.' : message);
+      }
+    },
+  });
+  /** Text field bindings; errors show once the field was left or the form submitted. */
+  const field = (name: 'username' | 'email' | 'password') => ({
+    value: form.values[name],
+    onChangeText: form.handleChange(name),
+    onBlur: form.handleBlur(name),
+    error: form.touched[name] ? form.errors[name] : undefined,
+  });
+  const submit = () => form.handleSubmit();
+  const accountType = form.values.accountType;
 
   return (
     <AuthShell title="Únete a los eventos" subtitle="Crea tu cuenta en segundos.">
@@ -60,7 +56,7 @@ export default function SignUp() {
                 key={t.value}
                 accessibilityRole="radio"
                 accessibilityState={{ checked: active }}
-                onPress={() => setAccountType(t.value)}
+                onPress={() => form.setFieldValue('accountType', t.value)}
                 style={[
                   styles.type,
                   { backgroundColor: active ? colors.primaryContainer : colors.surfaceHighest },
@@ -76,40 +72,30 @@ export default function SignUp() {
             );
           })}
         </View>
-        <TextField
-          label="Usuario"
-          placeholder="tu_usuario"
-          autoCapitalize="none"
-          value={form.username}
-          onChangeText={set('username')}
-          error={errors.username}
-        />
+        <TextField label="Usuario" placeholder="tu_usuario" autoCapitalize="none" {...field('username')} />
         <TextField
           label="Correo electrónico"
           placeholder="nombre@correo.com"
           autoCapitalize="none"
           keyboardType="email-address"
           autoComplete="email"
-          value={form.email}
-          onChangeText={set('email')}
-          error={errors.email}
+          {...field('email')}
         />
         <TextField
           label="Contraseña"
           placeholder="Mínimo 8 caracteres"
           secureTextEntry
           autoComplete="new-password"
-          value={form.password}
-          onChangeText={set('password')}
+          maxLength={100}
           onSubmitEditing={submit}
-          error={errors.password}
+          {...field('password')}
         />
-        {errors.form && (
+        {submitError && (
           <AppText variant="caption" color={colors.error}>
-            {errors.form}
+            {submitError}
           </AppText>
         )}
-        <GradientButton title="Crear cuenta" loading={loading} onPress={submit} style={{ marginTop: Spacing.two }} />
+        <GradientButton title="Crear cuenta" loading={form.isSubmitting} onPress={submit} style={{ marginTop: Spacing.two }} />
       </View>
       <Pressable onPress={() => router.replace('/sign-in')} style={{ alignSelf: 'center' }}>
         <AppText variant="body" color={colors.textSecondary}>

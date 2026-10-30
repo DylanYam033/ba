@@ -143,6 +143,8 @@ export interface Paginated<T> {
 
 export interface UserStats {
   eventsAttended: number;
+  /** Public events the user organizes (published, live or finished). */
+  eventsCreated: number;
   photosShared: number;
   followers: number;
   following: number;

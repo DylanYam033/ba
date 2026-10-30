@@ -1,4 +1,5 @@
 import { router } from 'expo-router';
+import { useFormik } from 'formik';
 import { useState } from 'react';
 import { ActivityIndicator, KeyboardAvoidingView, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
@@ -13,17 +14,41 @@ import { useAppTheme } from '@/ctx/theme';
 import { ApiError } from '@/lib/api';
 import { usersApi } from '@/lib/endpoints';
 import { pickImage } from '@/lib/pick-image';
+import { editProfileSchema, type EditProfileValues } from '@/lib/user-form';
 
 export default function EditProfile() {
   const { colors, scheme, toggle } = useAppTheme();
   const { setUser } = useAuth();
   const { radiusKm, setRadiusKm } = usePreferences();
   const user = useCurrentUser();
-  const [username, setUsername] = useState(user.username);
-  const [bio, setBio] = useState(user.bio ?? '');
   const [error, setError] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+
+  const form = useFormik<EditProfileValues>({
+    initialValues: { username: user.username, bio: user.bio ?? '' },
+    validationSchema: editProfileSchema,
+    onSubmit: async ({ username, bio }, helpers) => {
+      setError(null);
+      try {
+        const trimmed = username.trim();
+        const updated = await usersApi.update(user.id, {
+          username: trimmed !== user.username ? trimmed : undefined,
+          bio,
+        });
+        setUser(updated);
+        router.back();
+      } catch (e) {
+        if (e instanceof ApiError && e.status === 409) helpers.setFieldError('username', 'Ese nombre de usuario ya está en uso.');
+        else setError((e as Error).message);
+      }
+    },
+  });
+  const field = (name: keyof EditProfileValues) => ({
+    value: form.values[name],
+    onChangeText: form.handleChange(name),
+    onBlur: form.handleBlur(name),
+    error: form.touched[name] ? form.errors[name] : undefined,
+  });
 
   // The avatar is saved as soon as it's picked, independently of the form.
   const changeAvatar = async () => {
@@ -37,27 +62,6 @@ export default function EditProfile() {
       setError((e as Error).message);
     } finally {
       setUploading(false);
-    }
-  };
-
-  const save = async () => {
-    if (!/^[a-zA-Z0-9_.]{3,50}$/.test(username)) {
-      setError('El usuario debe tener 3 a 50 caracteres (letras, números, _ o .).');
-      return;
-    }
-    setSaving(true);
-    setError(null);
-    try {
-      const updated = await usersApi.update(user.id, {
-        username: username !== user.username ? username : undefined,
-        bio,
-      });
-      setUser(updated);
-      router.back();
-    } catch (e) {
-      setError(e instanceof ApiError && e.status === 409 ? 'Ese nombre de usuario ya está en uso.' : (e as Error).message);
-    } finally {
-      setSaving(false);
     }
   };
 
@@ -78,7 +82,7 @@ export default function EditProfile() {
             accessibilityRole="button"
             accessibilityLabel="Cambiar foto de perfil"
             style={[styles.avatar, glow(colors.primary, 0.3, 30)]}>
-            <Avatar uri={user.avatarUrl} name={username || user.username} size={120} />
+            <Avatar uri={user.avatarUrl} name={form.values.username || user.username} size={120} />
             {uploading && (
               <View style={[styles.avatarOverlay, { backgroundColor: 'rgba(0,0,0,0.45)' }]}>
                 <ActivityIndicator color="#fff" />
@@ -91,11 +95,10 @@ export default function EditProfile() {
           <AppText variant="caption" style={{ textAlign: 'center', marginTop: -Spacing.three }}>
             Toca la foto para cambiarla
           </AppText>
-          <TextField label="Usuario" value={username} onChangeText={setUsername} autoCapitalize="none" />
+          <TextField label="Usuario" autoCapitalize="none" maxLength={50} {...field('username')} />
           <TextField
             label="Bio"
-            value={bio}
-            onChangeText={setBio}
+            {...field('bio')}
             multiline
             maxLength={500}
             placeholder="Fan del techno, cazador de terrazas…"
@@ -123,7 +126,7 @@ export default function EditProfile() {
             </AppText>
           )}
           <View style={{ gap: Spacing.three, marginTop: Spacing.three }}>
-            <GradientButton title="Guardar cambios" loading={saving} onPress={save} />
+            <GradientButton title="Guardar cambios" loading={form.isSubmitting} onPress={() => form.handleSubmit()} />
             <GhostButton title="Cancelar" onPress={() => router.back()} />
           </View>
         </ScrollView>

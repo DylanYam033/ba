@@ -46,14 +46,23 @@ export function ProfileHero({ user, stats, emptyBio }: { user: ProfileUser; stat
         <Counter value={stats?.followers} label="Seguidores" color={colors.primary} onPress={() => openFollows('followers')} />
         <View style={[styles.divider, { backgroundColor: colors.outlineVariant }]} />
         <Counter value={stats?.following} label="Siguiendo" color={colors.secondary} onPress={() => openFollows('following')} />
+        <View style={[styles.divider, { backgroundColor: colors.outlineVariant }]} />
+        <Counter value={stats?.eventsCreated} label="Eventos" color={colors.tertiary} />
       </View>
     </View>
   );
 }
 
-function Counter({ value, label, color, onPress }: { value?: number; label: string; color: string; onPress: () => void }) {
+/** Big number + label; tappable only when `onPress` is given (followers/following lists). */
+function Counter({ value, label, color, onPress }: { value?: number; label: string; color: string; onPress?: () => void }) {
   return (
-    <Pressable onPress={onPress} hitSlop={8} accessibilityRole="button" accessibilityLabel={`${value ?? 0} ${label}`} style={{ alignItems: 'center' }}>
+    <Pressable
+      onPress={onPress}
+      disabled={!onPress}
+      hitSlop={8}
+      accessibilityRole={onPress ? 'button' : 'text'}
+      accessibilityLabel={`${value ?? 0} ${label}`}
+      style={{ alignItems: 'center' }}>
       <AppText variant="heading" color={color}>
         {value === undefined ? '–' : compactNumber(value)}
       </AppText>
@@ -75,7 +84,7 @@ export function StatCard({ label, value, icon, color }: { label: string; value?:
         {label}
       </AppText>
       <AppText variant="display" color={color}>
-        {value ?? '–'}
+        {value === undefined ? '–' : compactNumber(value)}
       </AppText>
     </View>
   );

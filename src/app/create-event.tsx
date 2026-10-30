@@ -2,7 +2,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { useFormik } from 'formik';
 import { useState } from 'react';
-import { KeyboardAvoidingView, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { KeyboardAvoidingView, Pressable, ScrollView, StyleSheet, Switch, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Icon } from '@/components/icon';
@@ -158,7 +158,7 @@ export default function CreateEvent() {
                               ? [{ backgroundColor: hexToRgba(colors.primaryContainer, 0.25), borderColor: colors.primary }, glow(colors.primary, 0.45, 16)]
                               : { backgroundColor: colors.surfaceContainer, borderColor: colors.outlineVariant },
                           ]}>
-                          <Text style={{ fontSize: 26 }}>{meta.emoji}</Text>
+                          <Icon name={meta.icon} size={28} color={active ? colors.primary : meta.color} />
                         </View>
                         <AppText variant="label" color={active ? colors.primary : colors.textSecondary} style={{ fontSize: 9, textAlign: 'center' }}>
                           {meta.label}
