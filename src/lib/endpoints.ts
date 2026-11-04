@@ -45,7 +45,14 @@ export const eventsApi = {
    */
   nearby: (
     c: Coords,
-    opts: { radiusKm?: number; category?: EventCategory; status?: string; limit?: number; q?: string } & Partial<TimeWindow> = {},
+    opts: {
+      radiusKm?: number;
+      category?: EventCategory;
+      status?: string;
+      limit?: number;
+      q?: string;
+      isFree?: boolean;
+    } & Partial<TimeWindow> = {},
   ) =>
     api<Paginated<NearbyEvent>>('/events', {
       query: {
@@ -58,6 +65,7 @@ export const eventsApi = {
         from: opts.from,
         to: opts.to,
         q: opts.q,
+        isFree: opts.isFree,
       },
     }),
   trending: (c: Coords, radiusKm = 25, limit = 10) =>

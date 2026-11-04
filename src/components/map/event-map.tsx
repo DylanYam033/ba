@@ -6,7 +6,6 @@ import { useAppTheme } from '@/ctx/theme';
 import type { Coords } from '@/lib/endpoints';
 import type { MapPin } from '@/lib/types';
 
-import { DARK_MAP_STYLE } from './map-style';
 import { PinMarker } from './pin-marker';
 
 export interface EventMapProps {
@@ -40,10 +39,12 @@ export function EventMap({ center, pins = [], selectedId, onSelectPin, onPick, p
 
   return (
     <MapView
+      // Android reads userInterfaceStyle only when the map is created, so remount on theme change.
+      key={scheme}
       ref={map}
       style={[StyleSheet.absoluteFill, style]}
       initialRegion={{ latitude: center.lat, longitude: center.lng, latitudeDelta: delta(radiusKm), longitudeDelta: delta(radiusKm) }}
-      customMapStyle={scheme === 'dark' ? DARK_MAP_STYLE : []}
+      // Google's native light / dark map, matching the app theme.
       userInterfaceStyle={scheme}
       showsUserLocation={!onPick}
       showsMyLocationButton={false}

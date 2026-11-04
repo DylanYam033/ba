@@ -10,7 +10,7 @@ import { useAppTheme } from '@/ctx/theme';
 
 import { Avatar } from './event-cards';
 import { Icon } from './icon';
-import { AppText, BrandMark, glow } from './ui';
+import { AppText, glow } from './ui';
 
 /** Bell with the unread-notifications badge; opens the notifications screen. */
 export function NotificationsBell() {
@@ -31,29 +31,39 @@ export function NotificationsBell() {
   );
 }
 
-/** Glass app bar from the prototype: wordmark centered, bell + avatar on the right. */
-export function TopBar({ left, title, right }: { left?: ReactNode; title?: string; right?: ReactNode }) {
+/**
+ * Bell, plus the avatar that opens the profile. The avatar only lives on Inicio,
+ * so it's opt-in; everywhere else this is just the bell.
+ */
+export function HeaderActions({ showAvatar = false, avatarSize = 36 }: { showAvatar?: boolean; avatarSize?: number }) {
   const { colors } = useAppTheme();
   const { user } = useAuth();
+  if (!user) return null;
+  return (
+    <View style={styles.actions}>
+      <NotificationsBell />
+      {showAvatar && (
+        <Pressable
+          onPress={() => router.navigate('/profile')}
+          accessibilityLabel="Perfil"
+          style={{ borderRadius: avatarSize / 2 + 2, borderWidth: 2, borderColor: colors.primaryDeep }}>
+          <Avatar uri={user.avatarUrl} name={user.username} size={avatarSize} />
+        </Pressable>
+      )}
+    </View>
+  );
+}
+
+/** Glass app bar for pushed screens: back/close on the left, optional title, actions on the right. */
+export function TopBar({ left, title, right }: { left?: ReactNode; title?: string; right?: ReactNode }) {
+  const { colors } = useAppTheme();
   const insets = useSafeAreaInsets();
 
   return (
     <View style={[styles.bar, { paddingTop: insets.top + Spacing.two, backgroundColor: colors.overlay }, glow(colors.brandStart, 0.12)]}>
       <View style={styles.side}>{left}</View>
-      {title ? <AppText variant="heading">{title}</AppText> : <BrandMark />}
-      <View style={[styles.side, { alignItems: 'flex-end' }]}>
-        {right ??
-          (user && (
-            <View style={styles.actions}>
-              <NotificationsBell />
-              <Pressable onPress={() => router.navigate('/profile')} accessibilityLabel="Perfil">
-                <View style={{ borderRadius: 20, borderWidth: 2, borderColor: colors.primaryContainer }}>
-                  <Avatar uri={user.avatarUrl} name={user.username} size={36} />
-                </View>
-              </Pressable>
-            </View>
-          ))}
-      </View>
+      {title ? <AppText variant="heading">{title}</AppText> : null}
+      <View style={[styles.side, { alignItems: 'flex-end' }]}>{right ?? <HeaderActions />}</View>
     </View>
   );
 }

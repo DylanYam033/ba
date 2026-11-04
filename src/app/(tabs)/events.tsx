@@ -1,9 +1,10 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { FeaturedEventCard, RowEventCard } from '@/components/event-cards';
-import { TopBar } from '@/components/top-bar';
+import { HeaderActions } from '@/components/top-bar';
 import { AppText, EmptyState, ErrorState, glow, LoadingState } from '@/components/ui';
 import { MaxContentWidth, Radius, Spacing, TabBarHeight } from '@/constants/theme';
 import { useAppTheme } from '@/ctx/theme';
@@ -26,18 +27,23 @@ const EMPTY: Record<Tab, { title: string; message: string }> = {
 
 export default function MyEvents() {
   const { colors } = useAppTheme();
+  const insets = useSafeAreaInsets();
   const [tab, setTab] = useState<Tab>('going');
   const events = useQuery(() => usersApi.myEvents(tab), [tab]);
   const list = events.data ?? [];
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <TopBar />
       <ScrollView
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[styles.content, { paddingTop: insets.top + Spacing.three }]}
         refreshControl={<RefreshControl refreshing={events.refreshing} onRefresh={events.refresh} tintColor={colors.secondary} />}>
         <View style={{ gap: Spacing.one }}>
-          <AppText variant="display">Mis eventos</AppText>
+          <View style={styles.titleRow}>
+            <AppText variant="display" style={{ flex: 1 }}>
+              Mis eventos
+            </AppText>
+            <HeaderActions />
+          </View>
           <AppText variant="body" color={colors.textSecondary}>
             Tus eventos de la ciudad.
           </AppText>
@@ -52,8 +58,8 @@ export default function MyEvents() {
                 accessibilityRole="tab"
                 accessibilityState={{ selected: active }}
                 onPress={() => setTab(t.key)}
-                style={[styles.segmentItem, active && [{ backgroundColor: colors.primaryContainer }, glow(colors.primary, 0.3)]]}>
-                <AppText variant="label" color={active ? colors.onPrimaryContainer : colors.textSecondary} style={{ fontSize: 12 }}>
+                style={[styles.segmentItem, active && [{ backgroundColor: colors.primaryDeep }, glow(colors.primaryDeep, 0.3)]]}>
+                <AppText variant="label" color={active ? colors.onPrimary : colors.textSecondary} style={{ fontSize: 12 }}>
                   {t.label}
                 </AppText>
               </Pressable>
@@ -84,13 +90,13 @@ export default function MyEvents() {
 const styles = StyleSheet.create({
   content: {
     paddingHorizontal: Spacing.four,
-    paddingTop: Spacing.four,
     paddingBottom: TabBarHeight + Spacing.five,
     gap: Spacing.five,
     width: '100%',
     maxWidth: MaxContentWidth,
     alignSelf: 'center',
   },
+  titleRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three },
   segment: { flexDirection: 'row', padding: 4, borderRadius: Radius.full },
   segmentItem: { flex: 1, alignItems: 'center', paddingVertical: 12, borderRadius: Radius.full },
 });

@@ -1,16 +1,16 @@
 import { router } from 'expo-router';
-import { useMemo, useRef, useState } from 'react';
-import { FlatList, PanResponder, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { useRef, useState } from 'react';
+import { FlatList, PanResponder, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import Animated, { interpolate, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Avatar, CarouselEventCard } from '@/components/event-cards';
+import { CarouselEventCard } from '@/components/event-cards';
+import { FilterButton, FilterSheet, type FilterSheetHandle, type FilterSheetState } from '@/components/filter-sheet';
 import { Icon } from '@/components/icon';
 import { EventMap } from '@/components/map/event-map';
-import { NotificationsBell } from '@/components/top-bar';
-import { AppText, Chip, glow, SegmentedControl } from '@/components/ui';
-import { Fonts, Radius, Spacing, TabBarHeight } from '@/constants/theme';
-import { useCurrentUser } from '@/ctx/auth';
+import { HeaderActions } from '@/components/top-bar';
+import { AppText, Chip, glow, NowToggle, SearchField, SegmentedControl } from '@/components/ui';
+import { Radius, Spacing, TabBarHeight } from '@/constants/theme';
 import { usePreferences } from '@/ctx/preferences';
 import { useAppTheme } from '@/ctx/theme';
 import { useDebouncedValue } from '@/hooks/use-debounced-value';
@@ -18,6 +18,7 @@ import { useQuery } from '@/hooks/use-query';
 import { FALLBACK_COORDS, useUserLocation } from '@/hooks/use-user-location';
 import { CATEGORIES, CATEGORY_KEYS } from '@/lib/categories';
 import { eventsApi, type Coords } from '@/lib/endpoints';
+import { activeFilterCount, DEFAULT_FILTERS, matchesFilters, priceParam, type EventFilters } from '@/lib/event-filters';
 import { hasEnded, isLive, timeWindow, UPCOMING_DAYS, type When } from '@/lib/format';
 import { searchTerms } from '@/lib/search';
 import type { EventCategory, MapPin } from '@/lib/types';
@@ -33,12 +34,13 @@ const WHEN_OPTIONS = (Object.keys(WHEN_COPY) as When[]).map((value) => ({ value,
 
 export default function MapScreen() {
   const { colors } = useAppTheme();
-  const user = useCurrentUser();
   const insets = useSafeAreaInsets();
   const { coords, locate } = useUserLocation();
-  const { radiusKm } = usePreferences();
+  const { radiusKm, setRadiusKm } = usePreferences();
   const [category, setCategory] = useState<EventCategory | undefined>();
   const [liveOnly, setLiveOnly] = useState(false);
+  const [filters, setFilters] = useState<EventFilters>(DEFAULT_FILTERS);
+  const filterSheet = useRef<FilterSheetHandle>(null);
   const [search, setSearch] = useState('');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [recentered, setCenter] = useState<Coords | null>(null);
@@ -51,10 +53,13 @@ export default function MapScreen() {
   const query = useDebouncedValue(search.trim());
   const searching = searchTerms(query).length > 0;
   const searchFrom = timeWindow('today').from;
+  const isFree = priceParam(filters.price);
+  // Pins carry no price: with a search or a price filter, the (server-filtered) cards double as pins.
+  const cardsAsPins = searching || isFree !== undefined;
 
   const pins = useQuery(
-    coords && !searching ? () => eventsApi.mapPins(coords, radiusKm, category, range) : null,
-    [coords, category, range.from, searching, radiusKm],
+    coords && !cardsAsPins ? () => eventsApi.mapPins(coords, radiusKm, category, range) : null,
+    [coords, category, range.from, cardsAsPins, radiusKm],
   );
   const nearby = useQuery(
     coords
@@ -62,41 +67,36 @@ export default function MapScreen() {
           eventsApi.nearby(
             coords,
             searching
-              ? { radiusKm, category, limit: 50, from: searchFrom, q: query }
-              : { radiusKm, category, limit: 50, ...range },
+              ? { radiusKm, category, isFree, limit: 50, from: searchFrom, q: query }
+              : { radiusKm, category, isFree, limit: 50, ...range },
           )
       : null,
-    [coords, category, range.from, searching ? query : '', searchFrom, radiusKm],
+    [coords, category, isFree, range.from, searching ? query : '', searchFrom, radiusKm],
   );
 
-  // Windows start at midnight, so drop today's events that already ended.
-  const matchingCards = useMemo(
-    () =>
-      (nearby.data?.data ?? [])
-        .filter((e) => !hasEnded(e) && (!liveOnly || isLive(e)))
-        .sort((a, b) => a.startAt.localeCompare(b.startAt)),
-    [nearby.data, liveOnly],
-  );
-  // Search results already carry coordinates, so they double as pins.
-  const visiblePins = useMemo<MapPin[]>(
-    () =>
-      searching ? matchingCards : (pins.data ?? []).filter((p) => !hasEnded(p) && (!liveOnly || isLive(p))),
-    [searching, matchingCards, pins.data, liveOnly],
-  );
+  // Windows start at midnight, so drop today's events that already ended. "Ahora", attendance
+  // and time of day aren't API params: filter what came back.
+  const keep = (e: MapPin) => !hasEnded(e) && (!liveOnly || isLive(e)) && matchesFilters(e, filters);
+  const matchingCards = (nearby.data?.data ?? []).filter(keep).sort((a, b) => a.startAt.localeCompare(b.startAt));
+  const visiblePins: MapPin[] = cardsAsPins ? matchingCards : (pins.data ?? []).filter(keep);
+  const filterCount = activeFilterCount(filters);
   // Selected pin's card goes first so the sheet reflects the tap.
-  const cards = useMemo(
-    () =>
-      selectedId
-        ? [...matchingCards].sort((a, b) => Number(b.id === selectedId) - Number(a.id === selectedId))
-        : matchingCards,
-    [matchingCards, selectedId],
-  );
+  const cards = selectedId
+    ? [...matchingCards].sort((a, b) => Number(b.id === selectedId) - Number(a.id === selectedId))
+    : matchingCards;
 
   const changeWhen = (next: When) => {
     setWhen(next);
     setSelectedId(null);
-    // Only today's events can be live.
+    // Only today's events can be happening now.
     if (next !== 'today') setLiveOnly(false);
+  };
+
+  const applyFilters = (next: FilterSheetState) => {
+    changeWhen(next.when);
+    setFilters(next.filters);
+    // Distance is the shared preference (settings + Explore).
+    if (next.radiusKm !== radiusKm) setRadiusKm(next.radiusKm);
   };
 
   const sheet = useCollapsibleSheet();
@@ -110,35 +110,20 @@ export default function MapScreen() {
     <View style={{ flex: 1, backgroundColor: colors.surface }}>
       <EventMap center={center} pins={visiblePins} selectedId={selectedId} onSelectPin={selectPin} radiusKm={radiusKm} />
 
-      {/* Search + live toggle + avatar */}
+      {/* Search + "Ahora" + filters + bell */}
       <View style={[styles.top, { paddingTop: insets.top + Spacing.two }]} pointerEvents="box-none">
-        <View style={[styles.search, { backgroundColor: colors.glass }]}>
-          <Icon name="search" size={20} color={colors.textMuted} />
-          <TextInput
-            value={search}
-            onChangeText={setSearch}
-            placeholder="Encuentra eventos..."
-            returnKeyType="search"
-            placeholderTextColor={colors.textMuted}
-            style={[styles.searchInput, { color: colors.text }]}
-          />
-          {when === 'today' && (
-            <Pressable
-              onPress={() => setLiveOnly((v) => !v)}
-              accessibilityRole="switch"
-              accessibilityState={{ checked: liveOnly }}
-              style={[styles.liveToggle, { backgroundColor: liveOnly ? colors.live : 'transparent', borderColor: colors.live }]}>
-              <View style={[styles.liveDot, { backgroundColor: liveOnly ? '#fff' : colors.live }]} />
-              <AppText variant="label" color={liveOnly ? '#fff' : colors.text} style={{ fontSize: 10 }}>
-                En vivo
-              </AppText>
-            </Pressable>
-          )}
-          <NotificationsBell />
-          <Pressable onPress={() => router.navigate('/profile')} accessibilityLabel="Perfil">
-            <Avatar uri={user.avatarUrl} name={user.username} size={32} />
-          </Pressable>
-        </View>
+        <SearchField
+          value={search}
+          onChangeText={setSearch}
+          style={styles.search}
+          right={
+            <>
+              {when === 'today' && <NowToggle value={liveOnly} onChange={setLiveOnly} />}
+              <FilterButton count={filterCount} onPress={() => filterSheet.current?.open()} />
+              <HeaderActions />
+            </>
+          }
+        />
 
         {!searching && (
           <SegmentedControl options={WHEN_OPTIONS} value={when} onChange={changeWhen} style={{ marginLeft: Spacing.three }} />
@@ -243,6 +228,8 @@ export default function MapScreen() {
           />
         )}
       </Animated.View>
+
+      <FilterSheet ref={filterSheet} value={{ radiusKm, when, filters }} onApply={applyFilters} />
     </View>
   );
 }
@@ -316,19 +303,7 @@ function useCollapsibleSheet() {
 
 const styles = StyleSheet.create({
   top: { position: 'absolute', left: 0, right: 0, top: 0, gap: Spacing.two },
-  search: {
-    marginHorizontal: Spacing.three,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.two + 4,
-    paddingLeft: Spacing.three,
-    paddingRight: 6,
-    paddingVertical: 6,
-    borderRadius: Radius.full,
-  },
-  searchInput: { flex: 1, fontFamily: Fonts.body, fontSize: 15, paddingVertical: 6 },
-  liveToggle: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, paddingVertical: 5, borderRadius: Radius.full, borderWidth: 1 },
-  liveDot: { width: 6, height: 6, borderRadius: 3 },
+  search: { marginHorizontal: Spacing.three },
   chips: { paddingHorizontal: Spacing.three, gap: Spacing.two, paddingVertical: 4 },
   fab: { position: 'absolute', right: Spacing.four },
   fabBtn: { width: 56, height: 56, borderRadius: 28, alignItems: 'center', justifyContent: 'center' },

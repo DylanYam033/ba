@@ -226,11 +226,14 @@ export function SearchField({
   value,
   onChangeText,
   placeholder = 'Encuentra eventos...',
+  right,
   style,
 }: {
   value: string;
   onChangeText: (text: string) => void;
   placeholder?: string;
+  /** Extra controls inside the pill, after the clear button (e.g. "Ahora", filters). */
+  right?: ReactNode;
   style?: StyleProp<ViewStyle>;
 }) {
   const { colors } = useAppTheme();
@@ -252,7 +255,27 @@ export function SearchField({
           <Icon name="close" size={18} color={colors.textMuted} />
         </Pressable>
       )}
+      {right}
     </View>
+  );
+}
+
+/** "Ahora" switch: keeps only events happening right now (map + Explore). */
+export function NowToggle({ value, onChange }: { value: boolean; onChange: (next: boolean) => void }) {
+  const { colors } = useAppTheme();
+  return (
+    <Pressable
+      onPress={() => onChange(!value)}
+      hitSlop={6}
+      accessibilityRole="switch"
+      accessibilityLabel="Solo eventos de ahora"
+      accessibilityState={{ checked: value }}
+      style={[styles.nowToggle, { backgroundColor: value ? colors.live : 'transparent', borderColor: colors.live }]}>
+      <View style={[styles.nowDot, { backgroundColor: value ? '#fff' : colors.live }]} />
+      <AppText variant="label" color={value ? '#fff' : colors.text} style={{ fontSize: 10 }}>
+        Ahora
+      </AppText>
+    </Pressable>
   );
 }
 
@@ -469,6 +492,8 @@ const styles = StyleSheet.create({
     borderRadius: Radius.full,
   },
   searchInput: { flex: 1, fontFamily: Fonts.body, fontSize: 15, paddingVertical: 6 },
+  nowToggle: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, paddingVertical: 5, borderRadius: Radius.full, borderWidth: 1 },
+  nowDot: { width: 6, height: 6, borderRadius: 3 },
   chip: {
     flexDirection: 'row',
     alignItems: 'center',
