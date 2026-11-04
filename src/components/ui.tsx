@@ -32,7 +32,7 @@ const variantStyle = StyleSheet.create({
   body: { fontFamily: Fonts.body, fontSize: 15, lineHeight: 22 },
   bodyStrong: { fontFamily: Fonts.bodyBold, fontSize: 15, lineHeight: 22 },
   // Ticket-style metadata: uppercase with wide tracking.
-  label: { fontFamily: Fonts.bodyExtraBold, fontSize: 11, letterSpacing: 1.2, textTransform: 'uppercase' },
+  label: { fontFamily: Fonts.bodyExtraBold, fontSize: 11, letterSpacing: 0.3 },
   caption: { fontFamily: Fonts.body, fontSize: 13, lineHeight: 18 },
 });
 
@@ -329,7 +329,7 @@ export function LiveBadge({ small }: { small?: boolean }) {
   return (
     <View style={[styles.live, { backgroundColor: colors.live }, small && { paddingHorizontal: 6 }]}>
       <View style={styles.liveDot} />
-      <Text style={styles.liveText}>EN VIVO</Text>
+      <Text style={styles.liveText}>En vivo</Text>
     </View>
   );
 }
@@ -478,10 +478,10 @@ const styles = StyleSheet.create({
     borderRadius: Radius.full,
   },
   segmented: { flexDirection: 'row', padding: 4, borderRadius: Radius.full, alignSelf: 'flex-start' },
-  segment: { paddingHorizontal: 18, paddingVertical: 8, borderRadius: Radius.full, alignItems: 'center' },
+  segment: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: Radius.full, alignItems: 'center' },
   live: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
   liveDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#fff' },
-  liveText: { color: '#fff', fontFamily: Fonts.bodyExtraBold, fontSize: 9, letterSpacing: 1 },
+  liveText: { color: '#fff', fontFamily: Fonts.bodyExtraBold, fontSize: 9, letterSpacing: 0.3 },
   pill: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 10, paddingVertical: 5, borderRadius: Radius.full },
   sectionHeader: { flexDirection: 'row', alignItems: 'flex-end', gap: Spacing.three },
   empty: { alignItems: 'center', gap: Spacing.two, paddingVertical: Spacing.six, paddingHorizontal: Spacing.four },

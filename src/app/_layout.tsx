@@ -71,6 +71,7 @@ function RootNavigator({ ready }: { ready: boolean }) {
       <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.background } }}>
         <Stack.Protected guard={!!user}>
           <Stack.Screen name="(tabs)" />
+          <Stack.Screen name="profile" />
           <Stack.Screen name="event/[id]" />
           <Stack.Screen name="create-event" options={{ presentation: 'modal' }} />
           <Stack.Screen name="edit-profile" options={{ presentation: 'modal' }} />

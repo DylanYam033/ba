@@ -2,11 +2,16 @@ import type { EventSummary } from './types';
 
 const LOCALE = 'es-CO';
 
+/** App-wide text case: only the first letter uppercase ("Mié, 28 de oct"), never all caps. */
+export function capitalize(text: string) {
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
 export function formatDayTime(iso: string) {
   const d = new Date(iso);
   const day = d.toLocaleDateString(LOCALE, { weekday: 'short', day: 'numeric', month: 'short' });
   const time = d.toLocaleTimeString(LOCALE, { hour: 'numeric', minute: '2-digit' });
-  return `${day} • ${time}`.toUpperCase();
+  return capitalize(`${day} • ${time}`);
 }
 
 export function formatLongRange(startIso: string, endIso: string) {
@@ -14,16 +19,16 @@ export function formatLongRange(startIso: string, endIso: string) {
   const e = new Date(endIso);
   const day = s.toLocaleDateString(LOCALE, { weekday: 'long', day: 'numeric', month: 'long' });
   const t = (d: Date) => d.toLocaleTimeString(LOCALE, { hour: 'numeric', minute: '2-digit' });
-  return `${day.charAt(0).toUpperCase()}${day.slice(1)} • ${t(s)} – ${t(e)}`;
+  return `${capitalize(day)} • ${t(s)} – ${t(e)}`;
 }
 
 export function formatShortDate(iso: string) {
-  return new Date(iso).toLocaleDateString(LOCALE, { day: 'numeric', month: 'short' }).toUpperCase();
+  return capitalize(new Date(iso).toLocaleDateString(LOCALE, { day: 'numeric', month: 'short' }));
 }
 
 export function formatDistance(km?: number) {
   if (km === undefined || km === null) return null;
-  return km < 1 ? `${Math.round(km * 1000)} M` : `${km.toFixed(1)} KM`;
+  return km < 1 ? `${Math.round(km * 1000)} m` : `${km.toFixed(1)} km`;
 }
 
 const COMPACT_UNITS = [
@@ -69,14 +74,16 @@ export function priceLabel(e: Pick<EventSummary, 'isFree' | 'price' | 'currency'
   return `${e.currency ?? ''} ${e.price.toLocaleString(LOCALE)}`.trim();
 }
 
-export type When = 'today' | 'upcoming';
+export type When = 'today' | 'tomorrow' | 'weekend' | 'upcoming';
 
 /** How far ahead "Próximos" looks, counting from tomorrow. */
 export const UPCOMING_DAYS = 7;
 
 /**
  * `[from, to)` window in ISO, cut at the device's local midnights so "today" is the user's day:
- * today, or tomorrow through UPCOMING_DAYS ahead.
+ * - today / tomorrow: that calendar day;
+ * - weekend: Saturday + Sunday (from today if it's already the weekend);
+ * - upcoming: tomorrow through UPCOMING_DAYS ahead.
  */
 export function timeWindow(when: When, now = new Date()) {
   const from = new Date(now);
@@ -84,6 +91,15 @@ export function timeWindow(when: When, now = new Date()) {
   const to = new Date(from);
   if (when === 'today') {
     to.setDate(to.getDate() + 1);
+  } else if (when === 'tomorrow') {
+    from.setDate(from.getDate() + 1);
+    to.setDate(to.getDate() + 2);
+  } else if (when === 'weekend') {
+    const day = from.getDay(); // 0 = domingo … 6 = sábado
+    if (day !== 0 && day !== 6) from.setDate(from.getDate() + (6 - day));
+    to.setTime(from.getTime());
+    // Up to the Monday after: 2 days from Saturday, 1 from Sunday.
+    to.setDate(to.getDate() + (from.getDay() === 6 ? 2 : 1));
   } else {
     from.setDate(from.getDate() + 1);
     to.setDate(to.getDate() + 1 + UPCOMING_DAYS);
@@ -100,7 +116,7 @@ export function formatDayHeading(iso: string, now = new Date()) {
   if (d <= now || d.toDateString() === now.toDateString()) return 'Hoy';
   if (d.toDateString() === tomorrow.toDateString()) return 'Mañana';
   const day = d.toLocaleDateString(LOCALE, { weekday: 'long', day: 'numeric', month: 'long' });
-  return `${day.charAt(0).toUpperCase()}${day.slice(1)}`;
+  return capitalize(day);
 }
 
 /** "ahora", "hace 5 min", "hace 3 h", "hace 2 d", then a short date. */

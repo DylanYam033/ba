@@ -4,9 +4,9 @@ import { Alert, Platform, RefreshControl, ScrollView, StyleSheet, View } from 'r
 import { RowEventCard } from '@/components/event-cards';
 import { OrganizedEvents } from '@/components/organized-events';
 import { ProfileHero, StatCard } from '@/components/profile-header';
-import { NotificationsBell, TopBar } from '@/components/top-bar';
+import { BackButton, NotificationsBell, TopBar } from '@/components/top-bar';
 import { EmptyState, GhostButton, GradientButton, IconButton, SectionHeader } from '@/components/ui';
-import { MaxContentWidth, Spacing, TabBarHeight } from '@/constants/theme';
+import { MaxContentWidth, Spacing } from '@/constants/theme';
 import { useAuth, useCurrentUser } from '@/ctx/auth';
 import { useAppTheme } from '@/ctx/theme';
 import { useQuery } from '@/hooks/use-query';
@@ -44,7 +44,7 @@ export default function Profile() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <TopBar right={<NotificationsBell />} />
+      <TopBar left={<BackButton />} right={<NotificationsBell />} />
       <ScrollView
         contentContainerStyle={styles.content}
         refreshControl={<RefreshControl refreshing={data.refreshing} onRefresh={data.refresh} tintColor={colors.secondary} />}>
@@ -94,7 +94,7 @@ const styles = StyleSheet.create({
   content: {
     paddingHorizontal: Spacing.four,
     paddingTop: Spacing.three,
-    paddingBottom: TabBarHeight + Spacing.five,
+    paddingBottom: Spacing.six,
     gap: Spacing.five,
     width: '100%',
     maxWidth: MaxContentWidth,

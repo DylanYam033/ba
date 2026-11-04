@@ -3,6 +3,7 @@ import type { StyleProp, ViewStyle } from 'react-native';
 
 /** Semantic icon names → SF Symbol (iOS) + Material Symbol (Android / web). */
 const ICONS = {
+  home: ['house', 'home'],
   map: ['map', 'map'],
   explore: ['safari', 'explore'],
   events: ['calendar.badge.checkmark', 'event_available'],
