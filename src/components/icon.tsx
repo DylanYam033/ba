@@ -19,6 +19,7 @@ const ICONS = {
   check: ['checkmark.circle.fill', 'check_circle'],
   fire: ['flame.fill', 'local_fire_department'],
   add: ['plus', 'add'],
+  remove: ['minus', 'remove'],
   back: ['chevron.left', 'arrow_back'],
   close: ['xmark', 'close'],
   darkMode: ['moon.fill', 'dark_mode'],

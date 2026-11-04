@@ -7,7 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CarouselEventCard } from '@/components/event-cards';
 import { FilterButton, FilterSheet, type FilterSheetHandle, type FilterSheetState } from '@/components/filter-sheet';
 import { Icon } from '@/components/icon';
-import { EventMap } from '@/components/map/event-map';
+import { EventMap, type EventMapControls, type MapRegion } from '@/components/map/event-map';
 import { HeaderActions } from '@/components/top-bar';
 import { AppText, Chip, glow, NowToggle, SearchField, SegmentedControl } from '@/components/ui';
 import { Radius, Spacing, TabBarHeight } from '@/constants/theme';
@@ -32,6 +32,22 @@ const WHEN_COPY: Record<When, { label: string; title: string; empty: string }> =
 };
 const WHEN_OPTIONS = (Object.keys(WHEN_COPY) as When[]).map((value) => ({ value, label: WHEN_COPY[value].label }));
 
+const KM_PER_DEGREE = 111;
+/** Zoom when the map opens and on "Mi ubicación": a close-up of the neighborhood. Searching still uses the distance preference. */
+const VIEW_RADIUS_KM = 3;
+
+/** Radius (km) of the circle around the region's center that covers it to the corners; API max 100. */
+function regionRadiusKm({ center, latitudeDelta, longitudeDelta }: MapRegion) {
+  const dy = (latitudeDelta / 2) * KM_PER_DEGREE;
+  const dx = (longitudeDelta / 2) * KM_PER_DEGREE * Math.cos((center.lat * Math.PI) / 180);
+  return Math.min(100, Math.max(0.5, Math.ceil(Math.hypot(dx, dy) * 10) / 10));
+}
+
+/** True when the pin is inside the visible rectangle (the API searched the circle around it). */
+function inRegion({ center, latitudeDelta, longitudeDelta }: MapRegion, p: Pick<MapPin, 'latitude' | 'longitude'>) {
+  return Math.abs(p.latitude - center.lat) <= latitudeDelta / 2 && Math.abs(p.longitude - center.lng) <= longitudeDelta / 2;
+}
+
 export default function MapScreen() {
   const { colors } = useAppTheme();
   const insets = useSafeAreaInsets();
@@ -44,8 +60,16 @@ export default function MapScreen() {
   const [search, setSearch] = useState('');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [recentered, setCenter] = useState<Coords | null>(null);
+  const [focusKey, setFocusKey] = useState(0);
   const [when, setWhen] = useState<When>('today');
   const center = recentered ?? coords ?? FALLBACK_COORDS;
+  const mapControls = useRef<EventMapControls>(null);
+  // "Buscar en esta zona": `movedTo` is where the user panned/zoomed (shows the button);
+  // `area` is the zone they chose to search. Without an area we search around the user.
+  const [movedTo, setMovedTo] = useState<MapRegion | null>(null);
+  const [area, setArea] = useState<MapRegion | null>(null);
+  const origin = area?.center ?? coords;
+  const searchRadius = area ? regionRadiusKm(area) : radiusKm;
 
   // Strings that only change with `when` or when the day rolls over — safe as query deps.
   const range = timeWindow(when);
@@ -58,28 +82,30 @@ export default function MapScreen() {
   const cardsAsPins = searching || isFree !== undefined;
 
   const pins = useQuery(
-    coords && !cardsAsPins ? () => eventsApi.mapPins(coords, radiusKm, category, range) : null,
-    [coords, category, range.from, cardsAsPins, radiusKm],
+    origin && !cardsAsPins ? () => eventsApi.mapPins(origin, searchRadius, category, range) : null,
+    [origin, category, range.from, cardsAsPins, searchRadius],
   );
   const nearby = useQuery(
-    coords
+    origin
       ? () =>
           eventsApi.nearby(
-            coords,
+            origin,
             searching
-              ? { radiusKm, category, isFree, limit: 50, from: searchFrom, q: query }
-              : { radiusKm, category, isFree, limit: 50, ...range },
+              ? { radiusKm: searchRadius, category, isFree, limit: 50, from: searchFrom, q: query }
+              : { radiusKm: searchRadius, category, isFree, limit: 50, ...range },
           )
       : null,
-    [coords, category, isFree, range.from, searching ? query : '', searchFrom, radiusKm],
+    [origin, category, isFree, range.from, searching ? query : '', searchFrom, searchRadius],
   );
 
-  // Windows start at midnight, so drop today's events that already ended. "Ahora", attendance
-  // and time of day aren't API params: filter what came back.
-  const keep = (e: MapPin) => !hasEnded(e) && (!liveOnly || isLive(e)) && matchesFilters(e, filters);
+  // Windows start at midnight, so drop today's events that already ended. "Ahora", attendance,
+  // time of day and the zone's exact edges aren't API params: filter what came back.
+  const keep = (e: MapPin) =>
+    !hasEnded(e) && (!liveOnly || isLive(e)) && matchesFilters(e, filters) && (!area || inRegion(area, e));
   const matchingCards = (nearby.data?.data ?? []).filter(keep).sort((a, b) => a.startAt.localeCompare(b.startAt));
   const visiblePins: MapPin[] = cardsAsPins ? matchingCards : (pins.data ?? []).filter(keep);
   const filterCount = activeFilterCount(filters);
+  const where = area ? 'en esta zona' : `a menos de ${radiusKm} km`;
   // Selected pin's card goes first so the sheet reflects the tap.
   const cards = selectedId
     ? [...matchingCards].sort((a, b) => Number(b.id === selectedId) - Number(a.id === selectedId))
@@ -99,6 +125,20 @@ export default function MapScreen() {
     if (next.radiusKm !== radiusKm) setRadiusKm(next.radiusKm);
   };
 
+  const searchThisArea = () => {
+    setArea(movedTo);
+    setMovedTo(null);
+    setSelectedId(null);
+  };
+
+  /** Back to "around me": drop the chosen zone and fly to the user's location. */
+  const recenter = async () => {
+    setArea(null);
+    setMovedTo(null);
+    setCenter(await locate());
+    setFocusKey((k) => k + 1);
+  };
+
   const sheet = useCollapsibleSheet();
 
   const selectPin = (id: string | null) => {
@@ -108,7 +148,16 @@ export default function MapScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.surface }}>
-      <EventMap center={center} pins={visiblePins} selectedId={selectedId} onSelectPin={selectPin} radiusKm={radiusKm} />
+      <EventMap
+        center={center}
+        pins={visiblePins}
+        selectedId={selectedId}
+        onSelectPin={selectPin}
+        radiusKm={VIEW_RADIUS_KM}
+        controls={mapControls}
+        focusKey={focusKey}
+        onRegionChange={(region, byUser) => byUser && setMovedTo(region)}
+      />
 
       {/* Search + "Ahora" + filters + bell */}
       <View style={[styles.top, { paddingTop: insets.top + Spacing.two }]} pointerEvents="box-none">
@@ -142,13 +191,37 @@ export default function MapScreen() {
             />
           ))}
         </ScrollView>
+
+        {/* Shown once the user moves the map; searches exactly what's on screen. */}
+        {movedTo && (
+          <Pressable
+            onPress={searchThisArea}
+            accessibilityRole="button"
+            style={({ pressed }) => [
+              styles.areaBtn,
+              { backgroundColor: colors.surface, opacity: pressed ? 0.85 : 1 },
+              glow('#000', 0.25, 16),
+            ]}>
+            <Icon name="search" size={16} color={colors.primary} />
+            <AppText variant="bodyStrong">Buscar en esta zona</AppText>
+          </Pressable>
+        )}
       </View>
 
-      {/* Locate me — rides along with the sheet */}
+      {/* Zoom + locate me — ride along with the sheet */}
       <Animated.View style={[styles.fab, { bottom: sheet.height + Spacing.three }, sheet.followStyle]}>
+        <View style={[styles.zoom, { backgroundColor: colors.glass }]}>
+          <Pressable accessibilityLabel="Acercar" hitSlop={4} onPress={() => mapControls.current?.zoomBy(1)} style={styles.zoomBtn}>
+            <Icon name="add" size={22} color={colors.text} />
+          </Pressable>
+          <View style={[styles.zoomDivider, { backgroundColor: colors.outlineVariant }]} />
+          <Pressable accessibilityLabel="Alejar" hitSlop={4} onPress={() => mapControls.current?.zoomBy(-1)} style={styles.zoomBtn}>
+            <Icon name="remove" size={22} color={colors.text} />
+          </Pressable>
+        </View>
         <Pressable
           accessibilityLabel="Mi ubicación"
-          onPress={async () => setCenter(await locate())}
+          onPress={recenter}
           style={[styles.fabBtn, { backgroundColor: colors.glass }, glow(colors.secondary, 0.35, 30)]}>
           <Icon name="myLocation" size={24} color={colors.secondary} />
         </Pressable>
@@ -178,7 +251,7 @@ export default function MapScreen() {
                     ? 'Buscando…'
                     : `${cards.length} ${cards.length === 1 ? 'evento' : 'eventos'}${
                         searching ? ' · desde hoy' : when === 'upcoming' ? ` · ${UPCOMING_DAYS} días` : ''
-                      }`}
+                      }${area ? ' · en esta zona' : ''}`}
                 </AppText>
               </View>
               <Animated.View style={sheet.chevronStyle}>
@@ -200,8 +273,8 @@ export default function MapScreen() {
           <View style={{ paddingHorizontal: Spacing.four, gap: Spacing.two }}>
             <AppText variant="caption">
               {searching
-                ? `Nada coincide con “${query}” a menos de ${radiusKm} km. Prueba con otra palabra o categoría.`
-                : `${WHEN_COPY[when].empty} a menos de ${radiusKm} km con estos filtros.`}
+                ? `Nada coincide con “${query}” ${where}. Prueba con otra palabra o categoría.`
+                : `${WHEN_COPY[when].empty} ${where} con estos filtros.`}
             </AppText>
             {searching ? null : when !== 'upcoming' ? (
               <Pressable onPress={() => changeWhen('upcoming')}>
@@ -305,7 +378,20 @@ const styles = StyleSheet.create({
   top: { position: 'absolute', left: 0, right: 0, top: 0, gap: Spacing.two },
   search: { marginHorizontal: Spacing.three },
   chips: { paddingHorizontal: Spacing.three, gap: Spacing.two, paddingVertical: 4 },
-  fab: { position: 'absolute', right: Spacing.four },
+  fab: { position: 'absolute', right: Spacing.four, alignItems: 'center', gap: Spacing.three },
+  zoom: { width: 44, borderRadius: 22, alignItems: 'center', overflow: 'hidden' },
+  zoomBtn: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
+  zoomDivider: { width: 24, height: StyleSheet.hairlineWidth },
+  areaBtn: {
+    alignSelf: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
+    paddingHorizontal: Spacing.four,
+    paddingVertical: 10,
+    borderRadius: Radius.full,
+    marginTop: Spacing.one,
+  },
   fabBtn: { width: 56, height: 56, borderRadius: 28, alignItems: 'center', justifyContent: 'center' },
   sheet: { position: 'absolute', left: 0, right: 0, bottom: 0, borderTopLeftRadius: 40, borderTopRightRadius: 40 },
   handleArea: { paddingTop: Spacing.three, paddingBottom: Spacing.three, alignItems: 'center' },
