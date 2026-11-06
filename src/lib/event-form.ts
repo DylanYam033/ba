@@ -22,9 +22,11 @@ export interface EventFormValues {
   price: string;
   capacity: string;
   tags: string;
+  /** Publish on behalf of this owned community; null = as yourself. */
+  communityId: string | null;
 }
 
-export function initialEventForm(): EventFormValues {
+export function initialEventForm(communityId: string | null = null): EventFormValues {
   const time = new Date();
   time.setHours(20, 0, 0, 0);
   return {
@@ -42,6 +44,7 @@ export function initialEventForm(): EventFormValues {
     price: '',
     capacity: '',
     tags: '',
+    communityId,
   };
 }
 

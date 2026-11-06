@@ -13,7 +13,7 @@ import { signUpSchema, type AccountType, type SignUpValues } from '@/lib/user-fo
 
 const ACCOUNT_TYPES: { value: AccountType; label: string; hint: string; icon: IconName }[] = [
   { value: 'user', label: 'Personal', hint: 'Descubre y asiste', icon: 'person' },
-  { value: 'business', label: 'Negocio', hint: 'Publica tus eventos', icon: 'store' },
+  { value: 'business', label: 'Establecimiento', hint: 'Publica tus eventos', icon: 'store' },
 ];
 
 export default function SignUp() {

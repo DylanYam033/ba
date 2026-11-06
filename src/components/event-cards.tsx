@@ -95,7 +95,8 @@ export function FeaturedEventCard({ event }: { event: CardEvent }) {
 }
 
 /** Horizontal row card ("Happening now", "Past"). */
-export function RowEventCard({ event, dimmed }: { event: CardEvent; dimmed?: boolean }) {
+/** `byline` says who it comes from (home feed): "Por Runners de Cali". */
+export function RowEventCard({ event, dimmed, byline }: { event: CardEvent; dimmed?: boolean; byline?: string }) {
   const { colors } = useAppTheme();
   const live = isLive(event);
   const meta = CATEGORIES[event.category] ?? CATEGORIES.other;
@@ -132,7 +133,10 @@ export function RowEventCard({ event, dimmed }: { event: CardEvent; dimmed?: boo
             {venueOf(event)}
           </AppText>
         </View>
-        <AppText variant="caption">{event.currentAttendees} asistentes</AppText>
+        <AppText variant="caption" numberOfLines={1}>
+          {byline ? `${byline} · ` : ''}
+          {event.currentAttendees} asistentes
+        </AppText>
       </View>
     </Pressable>
   );

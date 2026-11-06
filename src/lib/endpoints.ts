@@ -2,11 +2,14 @@ import { api, upload, type UploadFile } from './api';
 import type {
   AppNotification,
   Attendee,
+  Community,
+  CommunityDetail,
   CreateEventInput,
   EventCategory,
   EventDetail,
   EventSummary,
   EventWithLocation,
+  FeedEvent,
   MapPin,
   NearbyEvent,
   Paginated,
@@ -86,8 +89,13 @@ export const eventsApi = {
   photos: (id: string, limit = 50) => api<Paginated<Photo>>(`/events/${id}/photos`, { query: { limit } }),
 };
 
+/** Home feed origins, see GET /users/me/feed. */
+export type FeedSource = 'all' | 'communities' | 'people' | 'business';
+
 export const usersApi = {
   myEvents: (filter: 'going' | 'saved' | 'past') => api<EventWithLocation[]>('/users/me/events', { query: { filter } }),
+  /** Upcoming/live events from joined communities and followed people/businesses, soonest first. */
+  feed: (source: FeedSource = 'all') => api<FeedEvent[]>('/users/me/feed', { query: { source } }),
   stats: (id: string) => api<UserStats>(`/users/${id}/stats`),
   update: (id: string, body: { username?: string; bio?: string }) =>
     api<User>(`/users/${id}`, { method: 'PATCH', body }),
@@ -99,6 +107,22 @@ export const usersApi = {
   unfollow: (id: string) => api<void>(`/users/${id}/follow`, { method: 'DELETE' }),
   followers: (id: string, page = 1) => api<Paginated<UserRef>>(`/users/${id}/followers`, { query: { page, limit: 30 } }),
   following: (id: string, page = 1) => api<Paginated<UserRef>>(`/users/${id}/following`, { query: { page, limit: 30 } }),
+};
+
+export const communitiesApi = {
+  create: (body: { name: string; description?: string; category?: EventCategory }) =>
+    api<Community>('/communities', { method: 'POST', body }),
+  /** Discover: optional name search, biggest first. */
+  list: (q?: string, limit = 30) => api<Community[]>('/communities', { query: { q: q || undefined, limit } }),
+  mine: () => api<Community[]>('/communities/mine'),
+  get: (id: string) => api<CommunityDetail>(`/communities/${id}`),
+  update: (id: string, body: { name?: string; description?: string; category?: EventCategory }) =>
+    api<Community>(`/communities/${id}`, { method: 'PATCH', body }),
+  uploadAvatar: (id: string, file: UploadFile) => upload<Community>(`/communities/${id}/avatar`, file),
+  join: (id: string) => api<void>(`/communities/${id}/join`, { method: 'POST' }),
+  leave: (id: string) => api<void>(`/communities/${id}/join`, { method: 'DELETE' }),
+  members: (id: string, page = 1) => api<Paginated<UserRef>>(`/communities/${id}/members`, { query: { page, limit: 30 } }),
+  events: (id: string) => api<EventWithLocation[]>(`/communities/${id}/events`),
 };
 
 export const photosApi = {

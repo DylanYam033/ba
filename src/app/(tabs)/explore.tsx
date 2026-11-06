@@ -1,14 +1,12 @@
-import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { useRef, useState } from 'react';
-import { Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
+import { RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { FeaturedEventCard, RowEventCard } from '@/components/event-cards';
 import { FilterButton, FilterSheet, type FilterSheetHandle, type FilterSheetState } from '@/components/filter-sheet';
-import { Icon } from '@/components/icon';
 import { HeaderActions } from '@/components/top-bar';
-import { Chip, EmptyState, ErrorState, glow, LoadingState, NowToggle, SearchField, SectionHeader, SegmentedControl } from '@/components/ui';
+import { Chip, EmptyState, ErrorState, LoadingState, NowToggle, SearchField, SectionHeader, SegmentedControl } from '@/components/ui';
 import { MaxContentWidth, Spacing, TabBarHeight } from '@/constants/theme';
 import { usePreferences } from '@/ctx/preferences';
 import { useAppTheme } from '@/ctx/theme';
@@ -18,7 +16,7 @@ import { useUserLocation } from '@/hooks/use-user-location';
 import { CATEGORIES, CATEGORY_KEYS } from '@/lib/categories';
 import { eventsApi } from '@/lib/endpoints';
 import { activeFilterCount, DEFAULT_FILTERS, matchesFilters, priceParam, type EventFilters } from '@/lib/event-filters';
-import { formatDayHeading, hasEnded, isLive, timeWindow, UPCOMING_DAYS, type When } from '@/lib/format';
+import { groupByDay, hasEnded, isLive, timeWindow, UPCOMING_DAYS, type When } from '@/lib/format';
 import { searchTerms } from '@/lib/search';
 import type { EventCategory, NearbyEvent } from '@/lib/types';
 
@@ -234,28 +232,9 @@ export default function Explore() {
         </ScrollView>
       )}
 
-      <Pressable
-        accessibilityLabel="Crear evento"
-        onPress={() => router.push('/create-event')}
-        style={({ pressed }) => [styles.fab, glow(colors.primary, 0.45, 32), { transform: [{ scale: pressed ? 0.92 : 1 }] }]}>
-        <LinearGradient colors={[colors.primary, colors.secondary]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.fabFill}>
-          <Icon name="add" size={30} color={colors.onPrimary} />
-        </LinearGradient>
-      </Pressable>
-
       <FilterSheet ref={filterSheet} value={{ radiusKm, when: tab, filters }} onApply={applyFilters} />
     </View>
   );
-}
-
-/** Events (already sorted by start) bucketed under "Mañana" / "Sábado 31 de octubre"… */
-function groupByDay(events: NearbyEvent[]) {
-  const groups = new Map<string, NearbyEvent[]>();
-  for (const e of events) {
-    const day = formatDayHeading(e.startAt);
-    groups.set(day, [...(groups.get(day) ?? []), e]);
-  }
-  return [...groups];
 }
 
 const styles = StyleSheet.create({
@@ -273,6 +252,4 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
   },
   section: { gap: Spacing.four - 4 },
-  fab: { position: 'absolute', right: Spacing.four, bottom: TabBarHeight + Spacing.four, width: 60, height: 60, borderRadius: 30 },
-  fabFill: { flex: 1, borderRadius: 30, alignItems: 'center', justifyContent: 'center' },
 });

@@ -1,9 +1,11 @@
+import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { FeaturedEventCard, RowEventCard } from '@/components/event-cards';
+import { Icon } from '@/components/icon';
 import { HeaderActions } from '@/components/top-bar';
 import { AppText, EmptyState, ErrorState, glow, LoadingState } from '@/components/ui';
 import { MaxContentWidth, Radius, Spacing, TabBarHeight } from '@/constants/theme';
@@ -83,6 +85,15 @@ export default function MyEvents() {
           </View>
         )}
       </ScrollView>
+
+      <Pressable
+        accessibilityLabel="Crear evento"
+        onPress={() => router.push('/create-event')}
+        style={({ pressed }) => [styles.fab, glow(colors.primary, 0.45, 32), { transform: [{ scale: pressed ? 0.92 : 1 }] }]}>
+        <LinearGradient colors={[colors.primary, colors.secondary]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.fabFill}>
+          <Icon name="add" size={30} color={colors.onPrimary} />
+        </LinearGradient>
+      </Pressable>
     </View>
   );
 }
@@ -90,7 +101,8 @@ export default function MyEvents() {
 const styles = StyleSheet.create({
   content: {
     paddingHorizontal: Spacing.four,
-    paddingBottom: TabBarHeight + Spacing.five,
+    // Clears the floating "Crear evento" button so the last card stays reachable.
+    paddingBottom: TabBarHeight + Spacing.four + 60 + Spacing.three,
     gap: Spacing.five,
     width: '100%',
     maxWidth: MaxContentWidth,
@@ -99,4 +111,6 @@ const styles = StyleSheet.create({
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three },
   segment: { flexDirection: 'row', padding: 4, borderRadius: Radius.full },
   segmentItem: { flex: 1, alignItems: 'center', paddingVertical: 12, borderRadius: Radius.full },
+  fab: { position: 'absolute', right: Spacing.four, bottom: TabBarHeight + Spacing.four, width: 60, height: 60, borderRadius: 30 },
+  fabFill: { flex: 1, borderRadius: 30, alignItems: 'center', justifyContent: 'center' },
 });

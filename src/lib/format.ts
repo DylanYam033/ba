@@ -119,6 +119,16 @@ export function formatDayHeading(iso: string, now = new Date()) {
   return capitalize(day);
 }
 
+/** Events (already sorted by start) bucketed under "Hoy" / "Mañana" / "Sábado 31 de octubre"… */
+export function groupByDay<T extends { startAt: string }>(events: T[]): [string, T[]][] {
+  const groups = new Map<string, T[]>();
+  for (const e of events) {
+    const day = formatDayHeading(e.startAt);
+    groups.set(day, [...(groups.get(day) ?? []), e]);
+  }
+  return [...groups];
+}
+
 /** "ahora", "hace 5 min", "hace 3 h", "hace 2 d", then a short date. */
 export function formatRelative(iso: string) {
   const mins = Math.round((Date.now() - new Date(iso).getTime()) / 60000);

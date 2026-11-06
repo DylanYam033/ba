@@ -1,6 +1,7 @@
 import { router } from 'expo-router';
 import { Alert, Platform, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 
+import { CommunityRow } from '@/components/community-cards';
 import { RowEventCard } from '@/components/event-cards';
 import { OrganizedEvents } from '@/components/organized-events';
 import { ProfileHero, StatCard } from '@/components/profile-header';
@@ -10,7 +11,7 @@ import { MaxContentWidth, Spacing } from '@/constants/theme';
 import { useAuth, useCurrentUser } from '@/ctx/auth';
 import { useAppTheme } from '@/ctx/theme';
 import { useQuery } from '@/hooks/use-query';
-import { usersApi } from '@/lib/endpoints';
+import { communitiesApi, usersApi } from '@/lib/endpoints';
 
 export default function Profile() {
   const { colors, scheme, toggle } = useAppTheme();
@@ -19,12 +20,13 @@ export default function Profile() {
   const isBusiness = user.accountType === 'business';
 
   const data = useQuery(async () => {
-    const [stats, saved, created] = await Promise.all([
+    const [stats, saved, created, communities] = await Promise.all([
       usersApi.stats(user.id),
       usersApi.myEvents('saved'),
       usersApi.events(user.id),
+      communitiesApi.mine(),
     ]);
-    return { stats, saved, created };
+    return { stats, saved, created, communities };
   }, [user.id]);
 
   const confirmSignOut = () => {
@@ -41,6 +43,10 @@ export default function Profile() {
   const stats = data.data?.stats;
   const saved = data.data?.saved ?? [];
   const created = data.data?.created ?? [];
+  // Owned first, then the ones you joined.
+  const communities = [...(data.data?.communities ?? [])].sort(
+    (a, b) => Number(b.ownerId === user.id) - Number(a.ownerId === user.id),
+  );
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
@@ -60,6 +66,14 @@ export default function Profile() {
         <View style={styles.statGrid}>
           <StatCard label="Eventos asistidos" value={stats?.eventsAttended} icon="ticket" color={colors.primary} />
           <StatCard label="Fotos compartidas" value={stats?.photosShared} icon="photos" color={colors.secondary} />
+        </View>
+
+        <View style={{ gap: Spacing.three }}>
+          <SectionHeader title="Mis comunidades" action="Explorar" onAction={() => router.push('/communities')} />
+          {data.loading
+            ? null
+            : communities.map((c) => <CommunityRow key={c.id} community={c} />)}
+          <GhostButton title="Crear una comunidad" icon="add" onPress={() => router.push('/community/new')} />
         </View>
 
         <View style={{ gap: Spacing.three }}>

@@ -35,7 +35,7 @@ export function ProfileHero({ user, stats, emptyBio }: { user: ProfileUser; stat
         </View>
         {user.accountType === 'business' && (
           <AppText variant="label" color={colors.tertiary}>
-            Cuenta de negocio
+            Cuenta de establecimiento
           </AppText>
         )}
         <AppText variant="body" color={colors.textSecondary} style={{ textAlign: 'center', maxWidth: 300 }}>

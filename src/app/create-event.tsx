@@ -1,5 +1,5 @@
 import { LinearGradient } from 'expo-linear-gradient';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useFormik } from 'formik';
 import { useState } from 'react';
 import { KeyboardAvoidingView, Pressable, ScrollView, StyleSheet, Switch, View } from 'react-native';
@@ -13,9 +13,10 @@ import { AppText, Chip, glow, GradientButton, hexToRgba, Pill, TextField } from 
 import { MaxContentWidth, Radius, Spacing } from '@/constants/theme';
 import { useCurrentUser } from '@/ctx/auth';
 import { useAppTheme } from '@/ctx/theme';
+import { useQuery } from '@/hooks/use-query';
 import { FALLBACK_COORDS, useUserLocation } from '@/hooks/use-user-location';
 import { CATEGORIES, CATEGORY_KEYS } from '@/lib/categories';
-import { eventsApi } from '@/lib/endpoints';
+import { communitiesApi, eventsApi } from '@/lib/endpoints';
 import {
   EVENT_STEP_FIELDS,
   EVENT_STEP_SCHEMAS,
@@ -42,9 +43,13 @@ export default function CreateEvent() {
   const user = useCurrentUser();
   const insets = useSafeAreaInsets();
   const { coords, locate } = useUserLocation();
+  // Opened from a community page: start publishing on its behalf.
+  const params = useLocalSearchParams<{ communityId?: string }>();
   const days = nextDays(14);
   const [step, setStep] = useState(0);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  // Communities this user owns: only the owner publishes on a community's behalf.
+  const owned = useQuery(async () => (await communitiesApi.mine()).filter((c) => c.ownerId === user.id), [user.id]);
 
   const publish = async (v: EventFormValues) => {
     setSubmitError(null);
@@ -63,6 +68,7 @@ export default function CreateEvent() {
         currency: v.isFree ? undefined : 'COP',
         maxCapacity: v.capacity ? Number(v.capacity) : undefined,
         tags: v.tags.split(',').map((t) => t.trim().replace(/^#/, '')).filter(Boolean),
+        communityId: v.communityId ?? undefined,
         location: {
           name: v.venueName.trim(),
           address: v.venueAddress.trim() || undefined,
@@ -80,7 +86,7 @@ export default function CreateEvent() {
   };
 
   const form = useFormik<EventFormValues>({
-    initialValues: initialEventForm(),
+    initialValues: initialEventForm(params.communityId ?? null),
     // Only the current step's fields are validated; earlier steps already passed.
     validationSchema: EVENT_STEP_SCHEMAS[step],
     onSubmit: publish,
@@ -133,6 +139,26 @@ export default function CreateEvent() {
 
           {step === 0 && (
             <>
+              {owned.data && owned.data.length > 0 && (
+                <View style={{ gap: Spacing.three }}>
+                  <AppText variant="label">Publicar como</AppText>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: Spacing.two }}>
+                    <Chip label={`@${user.username}`} icon="person" active={!values.communityId} onPress={() => setFieldValue('communityId', null)} />
+                    {owned.data.map((c) => (
+                      <Chip
+                        key={c.id}
+                        label={c.name}
+                        icon="community"
+                        active={values.communityId === c.id}
+                        onPress={() => setFieldValue('communityId', c.id)}
+                      />
+                    ))}
+                  </ScrollView>
+                  {values.communityId && (
+                    <AppText variant="caption">Lo verán en Inicio todos los miembros de la comunidad.</AppText>
+                  )}
+                </View>
+              )}
               <TextField
                 label="Nombre del evento"
                 placeholder="Midnight Rooftop Sessions"
