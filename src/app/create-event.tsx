@@ -2,9 +2,10 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useFormik } from 'formik';
 import { useState } from 'react';
-import { KeyboardAvoidingView, Pressable, ScrollView, StyleSheet, Switch, View } from 'react-native';
+import { Alert, KeyboardAvoidingView, Pressable, ScrollView, StyleSheet, Switch, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { CoverPicker } from '@/components/cover-picker';
 import { Icon } from '@/components/icon';
 import { EventMap } from '@/components/map/event-map';
 import { TimeField } from '@/components/time-field';
@@ -77,9 +78,22 @@ export default function CreateEvent() {
           longitude: v.picked!.lng,
         },
       });
+      // The cover needs the event id. A failed upload shouldn't strand a draft (retrying would
+      // duplicate it), so publish anyway and say so.
+      let coverFailed = false;
+      if (v.cover) {
+        try {
+          await eventsApi.uploadCover(created.id, v.cover);
+        } catch {
+          coverFailed = true;
+        }
+      }
       // The API creates events as drafts; publish so they show on the map and feeds.
       await eventsApi.update(created.id, { status: 'published' });
       router.replace({ pathname: '/event/[id]', params: { id: created.id } });
+      if (coverFailed) {
+        Alert.alert('Evento publicado sin portada', 'No pudimos subir la imagen de portada. Tu evento ya está publicado.');
+      }
     } catch (e) {
       setSubmitError((e as Error).message);
     }
@@ -139,6 +153,7 @@ export default function CreateEvent() {
 
           {step === 0 && (
             <>
+              <CoverPicker value={values.cover} onChange={(file) => setFieldValue('cover', file)} />
               {owned.data && owned.data.length > 0 && (
                 <View style={{ gap: Spacing.three }}>
                   <AppText variant="label">Publicar como</AppText>

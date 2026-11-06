@@ -81,6 +81,8 @@ export const eventsApi = {
     api<EventDetail>(`/events/${id}`, { method: 'PATCH', body }),
   /** Soft-cancels the event and notifies attendees (organizer only). */
   cancel: (id: string) => api<void>(`/events/${id}`, { method: 'DELETE' }),
+  /** Replaces the cover image (organizer only). */
+  uploadCover: (id: string, file: UploadFile) => upload<EventDetail>(`/events/${id}/cover`, file),
   join: (id: string) => api<unknown>(`/events/${id}/join`, { method: 'POST' }),
   leave: (id: string) => api<void>(`/events/${id}/join`, { method: 'DELETE' }),
   save: (id: string) => api<void>(`/events/${id}/save`, { method: 'POST' }),

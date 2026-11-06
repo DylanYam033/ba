@@ -1,5 +1,6 @@
 import * as yup from 'yup';
 
+import type { UploadFile } from './api';
 import { CATEGORY_KEYS } from './categories';
 import type { Coords } from './endpoints';
 import { isInPast } from './format';
@@ -22,6 +23,8 @@ export interface EventFormValues {
   price: string;
   capacity: string;
   tags: string;
+  /** Cover picked on the device; uploaded right after the event is created. */
+  cover: UploadFile | null;
   /** Publish on behalf of this owned community; null = as yourself. */
   communityId: string | null;
 }
@@ -44,6 +47,7 @@ export function initialEventForm(communityId: string | null = null): EventFormVa
     price: '',
     capacity: '',
     tags: '',
+    cover: null,
     communityId,
   };
 }
