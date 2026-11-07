@@ -32,7 +32,7 @@ const variantStyle = StyleSheet.create({
   body: { fontFamily: Fonts.body, fontSize: 15, lineHeight: 22 },
   bodyStrong: { fontFamily: Fonts.bodyBold, fontSize: 15, lineHeight: 22 },
   // Ticket-style metadata: uppercase with wide tracking.
-  label: { fontFamily: Fonts.bodyExtraBold, fontSize: 11, letterSpacing: 1.2, textTransform: 'uppercase' },
+  label: { fontFamily: Fonts.bodyExtraBold, fontSize: 11, letterSpacing: 0.3 },
   caption: { fontFamily: Fonts.body, fontSize: 13, lineHeight: 18 },
 });
 
@@ -179,7 +179,7 @@ interface FieldProps extends TextInputProps {
 }
 
 /** Filled field whose bottom edge lights up with the neon gradient on focus. */
-export function TextField({ label, error, right, style, ...rest }: FieldProps) {
+export function TextField({ label, error, right, style, onFocus, onBlur, ...rest }: FieldProps) {
   const { colors } = useAppTheme();
   const [focused, setFocused] = useState(false);
   return (
@@ -192,15 +192,15 @@ export function TextField({ label, error, right, style, ...rest }: FieldProps) {
           placeholderTextColor={colors.textMuted}
           selectionColor={colors.primary}
           style={[styles.input, { color: colors.text }, Platform.OS === 'web' && styles.webInput, style]}
+          {...rest}
           onFocus={(e) => {
             setFocused(true);
-            rest.onFocus?.(e);
+            onFocus?.(e);
           }}
           onBlur={(e) => {
             setFocused(false);
-            rest.onBlur?.(e);
+            onBlur?.(e);
           }}
-          {...rest}
         />
         {right}
         {focused && (
@@ -218,6 +218,64 @@ export function TextField({ label, error, right, style, ...rest }: FieldProps) {
         </AppText>
       ) : null}
     </View>
+  );
+}
+
+/** Pill search input (glass, like the map's) with a clear button once there's text. */
+export function SearchField({
+  value,
+  onChangeText,
+  placeholder = 'Encuentra eventos...',
+  right,
+  style,
+}: {
+  value: string;
+  onChangeText: (text: string) => void;
+  placeholder?: string;
+  /** Extra controls inside the pill, after the clear button (e.g. "Ahora", filters). */
+  right?: ReactNode;
+  style?: StyleProp<ViewStyle>;
+}) {
+  const { colors } = useAppTheme();
+  return (
+    <View style={[styles.searchField, { backgroundColor: colors.glass }, style]}>
+      <Icon name="search" size={20} color={colors.textMuted} />
+      <TextInput
+        value={value}
+        onChangeText={onChangeText}
+        placeholder={placeholder}
+        placeholderTextColor={colors.textMuted}
+        selectionColor={colors.primary}
+        returnKeyType="search"
+        autoCorrect={false}
+        style={[styles.searchInput, { color: colors.text }, Platform.OS === 'web' && styles.webInput]}
+      />
+      {value.length > 0 && (
+        <Pressable onPress={() => onChangeText('')} hitSlop={10} accessibilityRole="button" accessibilityLabel="Borrar búsqueda">
+          <Icon name="close" size={18} color={colors.textMuted} />
+        </Pressable>
+      )}
+      {right}
+    </View>
+  );
+}
+
+/** "Ahora" switch: keeps only events happening right now (map + Explore). */
+export function NowToggle({ value, onChange }: { value: boolean; onChange: (next: boolean) => void }) {
+  const { colors } = useAppTheme();
+  return (
+    <Pressable
+      onPress={() => onChange(!value)}
+      hitSlop={6}
+      accessibilityRole="switch"
+      accessibilityLabel="Solo eventos de ahora"
+      accessibilityState={{ checked: value }}
+      style={[styles.nowToggle, { backgroundColor: value ? colors.live : 'transparent', borderColor: colors.live }]}>
+      <View style={[styles.nowDot, { backgroundColor: value ? '#fff' : colors.live }]} />
+      <AppText variant="label" color={value ? '#fff' : colors.text} style={{ fontSize: 10 }}>
+        Ahora
+      </AppText>
+    </Pressable>
   );
 }
 
@@ -255,12 +313,46 @@ export function Chip({
   );
 }
 
+/** Pill-shaped tab switcher (e.g. Hoy / Próximos); the active segment looks like an active Chip. */
+export function SegmentedControl<T extends string>({
+  options,
+  value,
+  onChange,
+  style,
+}: {
+  options: { value: T; label: string }[];
+  value: T;
+  onChange: (value: T) => void;
+  style?: StyleProp<ViewStyle>;
+}) {
+  const { colors } = useAppTheme();
+  return (
+    <View accessibilityRole="tablist" style={[styles.segmented, { backgroundColor: colors.glass }, style]}>
+      {options.map((o) => {
+        const active = o.value === value;
+        return (
+          <Pressable
+            key={o.value}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: active }}
+            onPress={() => onChange(o.value)}
+            style={[styles.segment, active && [{ backgroundColor: colors.primary }, glow(colors.primary, 0.4)]]}>
+            <AppText variant="label" color={active ? colors.onPrimary : colors.textSecondary}>
+              {o.label}
+            </AppText>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
+
 export function LiveBadge({ small }: { small?: boolean }) {
   const { colors } = useAppTheme();
   return (
     <View style={[styles.live, { backgroundColor: colors.live }, small && { paddingHorizontal: 6 }]}>
       <View style={styles.liveDot} />
-      <Text style={styles.liveText}>EN VIVO</Text>
+      <Text style={styles.liveText}>En vivo</Text>
     </View>
   );
 }
@@ -391,6 +483,17 @@ const styles = StyleSheet.create({
   input: { flex: 1, fontFamily: Fonts.body, fontSize: 16, paddingHorizontal: 20, paddingVertical: 16 },
   webInput: { outlineStyle: 'none' } as object,
   focusLine: { position: 'absolute', left: 0, right: 0, bottom: 0, height: 2 },
+  searchField: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two + 4,
+    paddingHorizontal: Spacing.three,
+    paddingVertical: 6,
+    borderRadius: Radius.full,
+  },
+  searchInput: { flex: 1, fontFamily: Fonts.body, fontSize: 15, paddingVertical: 6 },
+  nowToggle: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, paddingVertical: 5, borderRadius: Radius.full, borderWidth: 1 },
+  nowDot: { width: 6, height: 6, borderRadius: 3 },
   chip: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -399,9 +502,11 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: Radius.full,
   },
+  segmented: { flexDirection: 'row', padding: 4, borderRadius: Radius.full, alignSelf: 'flex-start' },
+  segment: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: Radius.full, alignItems: 'center' },
   live: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
   liveDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#fff' },
-  liveText: { color: '#fff', fontFamily: Fonts.bodyExtraBold, fontSize: 9, letterSpacing: 1 },
+  liveText: { color: '#fff', fontFamily: Fonts.bodyExtraBold, fontSize: 9, letterSpacing: 0.3 },
   pill: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 10, paddingVertical: 5, borderRadius: Radius.full },
   sectionHeader: { flexDirection: 'row', alignItems: 'flex-end', gap: Spacing.three },
   empty: { alignItems: 'center', gap: Spacing.two, paddingVertical: Spacing.six, paddingHorizontal: Spacing.four },

@@ -3,6 +3,7 @@ import type { StyleProp, ViewStyle } from 'react-native';
 
 /** Semantic icon names → SF Symbol (iOS) + Material Symbol (Android / web). */
 const ICONS = {
+  home: ['house', 'home'],
   map: ['map', 'map'],
   explore: ['safari', 'explore'],
   events: ['calendar.badge.checkmark', 'event_available'],
@@ -18,6 +19,7 @@ const ICONS = {
   check: ['checkmark.circle.fill', 'check_circle'],
   fire: ['flame.fill', 'local_fire_department'],
   add: ['plus', 'add'],
+  remove: ['minus', 'remove'],
   back: ['chevron.left', 'arrow_back'],
   close: ['xmark', 'close'],
   darkMode: ['moon.fill', 'dark_mode'],
@@ -39,6 +41,12 @@ const ICONS = {
   edit: ['pencil', 'edit'],
   chevronRight: ['chevron.right', 'chevron_right'],
   chevronDown: ['chevron.down', 'expand_more'],
+  filter: ['line.3.horizontal.decrease', 'filter_list'],
+  // Time of day (event filters)
+  dawn: ['moon.stars', 'bedtime'],
+  morning: ['sunrise', 'wb_twilight'],
+  afternoon: ['sun.max', 'sunny'],
+  night: ['moon', 'dark_mode'],
   bell: ['bell', 'notifications'],
   heart: ['heart', 'favorite'],
   heartFill: ['heart.fill', 'favorite'],

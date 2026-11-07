@@ -26,7 +26,7 @@ export function PinMarker({ pin, selected }: { pin: MapPin; selected?: boolean }
       {live && (
         <View style={[styles.liveTag, { backgroundColor: colors.live }]}>
           <AppText variant="label" color="#fff" style={{ fontSize: 8 }}>
-            EN VIVO
+            En vivo
           </AppText>
         </View>
       )}

@@ -69,9 +69,38 @@ export interface EventDetail extends EventSummary {
   location: Location;
   tags: { tag: string }[];
   organizer: { id: string; username: string; avatarUrl: string | null };
+  /** Set when published on behalf of a community. */
+  community: CommunityRef | null;
 }
 
 export type EventWithLocation = EventSummary & { location: Location };
+
+/** GET /users/me/feed row: an event plus who it comes from. */
+export type FeedEvent = EventWithLocation & {
+  community: CommunityRef | null;
+  organizer: UserRef & { accountType: AccountType };
+};
+
+/** Groups users create from their profile; anyone can join, only the owner publishes. */
+export interface Community {
+  id: string;
+  name: string;
+  description: string | null;
+  avatarUrl: string | null;
+  category: EventCategory | null;
+  ownerId: string;
+  createdAt: string;
+  membersCount: number;
+}
+
+export type CommunityRef = Pick<Community, 'id' | 'name' | 'avatarUrl'>;
+
+/** GET /communities/:id — with the viewer's membership. */
+export interface CommunityDetail extends Community {
+  owner: UserRef;
+  isMember: boolean;
+  isOwner: boolean;
+}
 
 export interface MapPin {
   id: string;
@@ -81,6 +110,8 @@ export interface MapPin {
   status: EventStatus;
   currentAttendees: number;
   title: string;
+  startAt: string;
+  endAt: string;
 }
 
 export interface Attendee {
@@ -141,6 +172,8 @@ export interface Paginated<T> {
 
 export interface UserStats {
   eventsAttended: number;
+  /** Public events the user organizes (published, live or finished). */
+  eventsCreated: number;
   photosShared: number;
   followers: number;
   following: number;
@@ -164,6 +197,8 @@ export interface CreateEventInput {
   currency?: string;
   maxCapacity?: number;
   tags?: string[];
+  /** Publish on behalf of a community the organizer owns. */
+  communityId?: string;
   location: {
     name: string;
     address?: string;

@@ -17,6 +17,7 @@ import { useEffect } from 'react';
 
 import { AuthProvider, useAuth } from '@/ctx/auth';
 import { NotificationsProvider } from '@/ctx/notifications';
+import { PreferencesProvider } from '@/ctx/preferences';
 import { SocketProvider } from '@/ctx/socket';
 import { AppThemeProvider, useAppTheme } from '@/ctx/theme';
 
@@ -35,13 +36,15 @@ export default function RootLayout() {
 
   return (
     <AppThemeProvider>
-      <AuthProvider>
-        <SocketProvider>
-          <NotificationsProvider>
-            <RootNavigator ready={fontsLoaded} />
-          </NotificationsProvider>
-        </SocketProvider>
-      </AuthProvider>
+      <PreferencesProvider>
+        <AuthProvider>
+          <SocketProvider>
+            <NotificationsProvider>
+              <RootNavigator ready={fontsLoaded} />
+            </NotificationsProvider>
+          </SocketProvider>
+        </AuthProvider>
+      </PreferencesProvider>
     </AppThemeProvider>
   );
 }
@@ -68,6 +71,10 @@ function RootNavigator({ ready }: { ready: boolean }) {
       <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.background } }}>
         <Stack.Protected guard={!!user}>
           <Stack.Screen name="(tabs)" />
+          <Stack.Screen name="profile" />
+          <Stack.Screen name="communities" />
+          <Stack.Screen name="community/[id]" />
+          <Stack.Screen name="community/new" options={{ presentation: 'modal' }} />
           <Stack.Screen name="event/[id]" />
           <Stack.Screen name="create-event" options={{ presentation: 'modal' }} />
           <Stack.Screen name="edit-profile" options={{ presentation: 'modal' }} />

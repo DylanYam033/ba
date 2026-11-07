@@ -2,11 +2,14 @@ import { api, upload, type UploadFile } from './api';
 import type {
   AppNotification,
   Attendee,
+  Community,
+  CommunityDetail,
   CreateEventInput,
   EventCategory,
   EventDetail,
   EventSummary,
   EventWithLocation,
+  FeedEvent,
   MapPin,
   NearbyEvent,
   Paginated,
@@ -23,6 +26,12 @@ export interface Coords {
   lng: number;
 }
 
+/** ISO `[from, to)` range, see `timeWindow` in lib/format. */
+export interface TimeWindow {
+  from: string;
+  to: string;
+}
+
 export const authApi = {
   login: (email: string, password: string) =>
     api<Tokens>('/auth/login', { method: 'POST', body: { email, password } }),
@@ -33,20 +42,47 @@ export const authApi = {
 };
 
 export const eventsApi = {
-  nearby: (c: Coords, opts: { radiusKm?: number; category?: EventCategory; status?: string; limit?: number } = {}) =>
+  /**
+   * `from`/`to` (ISO) keep only upcoming or live events overlapping that window.
+   * `q` matches every word against title, description and category, ignoring case and accents.
+   */
+  nearby: (
+    c: Coords,
+    opts: {
+      radiusKm?: number;
+      category?: EventCategory;
+      status?: string;
+      limit?: number;
+      q?: string;
+      isFree?: boolean;
+    } & Partial<TimeWindow> = {},
+  ) =>
     api<Paginated<NearbyEvent>>('/events', {
-      query: { lat: c.lat, lng: c.lng, radiusKm: opts.radiusKm ?? 25, category: opts.category, status: opts.status, limit: opts.limit ?? 20 },
+      query: {
+        lat: c.lat,
+        lng: c.lng,
+        radiusKm: opts.radiusKm ?? 25,
+        category: opts.category,
+        status: opts.status,
+        limit: opts.limit ?? 20,
+        from: opts.from,
+        to: opts.to,
+        q: opts.q,
+        isFree: opts.isFree,
+      },
     }),
   trending: (c: Coords, radiusKm = 25, limit = 10) =>
     api<NearbyEvent[]>('/events/trending', { query: { lat: c.lat, lng: c.lng, radiusKm, limit } }),
-  mapPins: (c: Coords, radiusKm = 25, category?: EventCategory) =>
-    api<MapPin[]>('/events/map-pins', { query: { lat: c.lat, lng: c.lng, radiusKm, category } }),
+  mapPins: (c: Coords, radiusKm = 25, category?: EventCategory, window?: TimeWindow) =>
+    api<MapPin[]>('/events/map-pins', { query: { lat: c.lat, lng: c.lng, radiusKm, category, from: window?.from, to: window?.to } }),
   get: (id: string) => api<EventDetail>(`/events/${id}`),
   create: (input: CreateEventInput) => api<EventDetail>('/events', { method: 'POST', body: input }),
   update: (id: string, body: Partial<Pick<EventSummary, 'status' | 'title' | 'description'>>) =>
     api<EventDetail>(`/events/${id}`, { method: 'PATCH', body }),
   /** Soft-cancels the event and notifies attendees (organizer only). */
   cancel: (id: string) => api<void>(`/events/${id}`, { method: 'DELETE' }),
+  /** Replaces the cover image (organizer only). */
+  uploadCover: (id: string, file: UploadFile) => upload<EventDetail>(`/events/${id}/cover`, file),
   join: (id: string) => api<unknown>(`/events/${id}/join`, { method: 'POST' }),
   leave: (id: string) => api<void>(`/events/${id}/join`, { method: 'DELETE' }),
   save: (id: string) => api<void>(`/events/${id}/save`, { method: 'POST' }),
@@ -55,8 +91,13 @@ export const eventsApi = {
   photos: (id: string, limit = 50) => api<Paginated<Photo>>(`/events/${id}/photos`, { query: { limit } }),
 };
 
+/** Home feed origins, see GET /users/me/feed. */
+export type FeedSource = 'all' | 'communities' | 'people' | 'business';
+
 export const usersApi = {
   myEvents: (filter: 'going' | 'saved' | 'past') => api<EventWithLocation[]>('/users/me/events', { query: { filter } }),
+  /** Upcoming/live events from joined communities and followed people/businesses, soonest first. */
+  feed: (source: FeedSource = 'all') => api<FeedEvent[]>('/users/me/feed', { query: { source } }),
   stats: (id: string) => api<UserStats>(`/users/${id}/stats`),
   update: (id: string, body: { username?: string; bio?: string }) =>
     api<User>(`/users/${id}`, { method: 'PATCH', body }),
@@ -68,6 +109,22 @@ export const usersApi = {
   unfollow: (id: string) => api<void>(`/users/${id}/follow`, { method: 'DELETE' }),
   followers: (id: string, page = 1) => api<Paginated<UserRef>>(`/users/${id}/followers`, { query: { page, limit: 30 } }),
   following: (id: string, page = 1) => api<Paginated<UserRef>>(`/users/${id}/following`, { query: { page, limit: 30 } }),
+};
+
+export const communitiesApi = {
+  create: (body: { name: string; description?: string; category?: EventCategory }) =>
+    api<Community>('/communities', { method: 'POST', body }),
+  /** Discover: optional name search, biggest first. */
+  list: (q?: string, limit = 30) => api<Community[]>('/communities', { query: { q: q || undefined, limit } }),
+  mine: () => api<Community[]>('/communities/mine'),
+  get: (id: string) => api<CommunityDetail>(`/communities/${id}`),
+  update: (id: string, body: { name?: string; description?: string; category?: EventCategory }) =>
+    api<Community>(`/communities/${id}`, { method: 'PATCH', body }),
+  uploadAvatar: (id: string, file: UploadFile) => upload<Community>(`/communities/${id}/avatar`, file),
+  join: (id: string) => api<void>(`/communities/${id}/join`, { method: 'POST' }),
+  leave: (id: string) => api<void>(`/communities/${id}/join`, { method: 'DELETE' }),
+  members: (id: string, page = 1) => api<Paginated<UserRef>>(`/communities/${id}/members`, { query: { page, limit: 30 } }),
+  events: (id: string) => api<EventWithLocation[]>(`/communities/${id}/events`),
 };
 
 export const photosApi = {

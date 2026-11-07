@@ -8,20 +8,21 @@ import { AppText, glow } from '@/components/ui';
 import { Radius, Spacing } from '@/constants/theme';
 import { useAppTheme } from '@/ctx/theme';
 
+// Profile isn't a tab: it opens from the avatar in every top bar.
 const TABS: Record<string, { label: string; icon: IconName }> = {
-  index: { label: 'Mapa', icon: 'map' },
+  index: { label: 'Inicio', icon: 'home' },
+  map: { label: 'Mapa', icon: 'map' },
   explore: { label: 'Explorar', icon: 'explore' },
   events: { label: 'Eventos', icon: 'events' },
-  profile: { label: 'Perfil', icon: 'person' },
 };
 
 export default function TabLayout() {
   return (
     <Tabs tabBar={(props) => <GlassTabBar {...props} />} screenOptions={{ headerShown: false }}>
       <Tabs.Screen name="index" />
+      <Tabs.Screen name="map" />
       <Tabs.Screen name="explore" />
       <Tabs.Screen name="events" />
-      <Tabs.Screen name="profile" />
     </Tabs>
   );
 }
@@ -48,7 +49,7 @@ function GlassTabBar({ state, emitter, navigateToTab }: BottomTabBarProps) {
           const tab = TABS[route.name];
           if (!tab) return null;
           const focused = state.index === index;
-          const color = focused ? colors.brandStart : colors.textMuted;
+          const color = focused ? colors.primaryDeep : colors.textMuted;
           return (
             <Pressable
               key={route.key}

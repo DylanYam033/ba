@@ -4,6 +4,7 @@ import { useState, type ReactNode } from 'react';
 import { ActivityIndicator, Alert, FlatList, Platform, Pressable, ScrollView, Share, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { CommunityAvatar } from '@/components/community-cards';
 import { Avatar, CarouselEventCard, CategoryBadge } from '@/components/event-cards';
 import { EventCover } from '@/components/event-cover';
 import { Icon } from '@/components/icon';
@@ -274,7 +275,7 @@ export default function EventDetailScreen() {
             <View style={styles.mapBox}>
               <EventMap
                 center={{ lat: event.location.latitude, lng: event.location.longitude }}
-                pins={[{ id: event.id, latitude: event.location.latitude, longitude: event.location.longitude, category: event.category, status: event.status, currentAttendees: 0, title: event.title }]}
+                pins={[{ id: event.id, latitude: event.location.latitude, longitude: event.location.longitude, category: event.category, status: event.status, currentAttendees: 0, title: event.title, startAt: event.startAt, endAt: event.endAt }]}
                 radiusKm={0.8}
                 interactive={false}
               />
@@ -285,7 +286,21 @@ export default function EventDetailScreen() {
             </View>
           </View>
 
-          {/* Organizer */}
+          {/* Community (when published on its behalf) + organizer */}
+          {event.community && (
+            <Pressable
+              onPress={() => router.push({ pathname: '/community/[id]', params: { id: event.community!.id } })}
+              accessibilityRole="button"
+              accessibilityLabel={`Ver comunidad ${event.community.name}`}
+              style={[styles.proof, { backgroundColor: colors.surfaceContainer }]}>
+              <CommunityAvatar community={event.community} size={44} />
+              <View style={{ flex: 1 }}>
+                <AppText variant="label">Comunidad</AppText>
+                <AppText variant="bodyStrong">{event.community.name}</AppText>
+              </View>
+              <Icon name="chevronRight" size={20} color={colors.textMuted} />
+            </Pressable>
+          )}
           <Pressable
             onPress={() => openUser(event.organizer.id)}
             accessibilityRole="button"

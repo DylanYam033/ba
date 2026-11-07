@@ -2,16 +2,15 @@ import { Redirect, useLocalSearchParams } from 'expo-router';
 import { useState, type ReactNode } from 'react';
 import { RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 
-import { RowEventCard } from '@/components/event-cards';
+import { OrganizedEvents } from '@/components/organized-events';
 import { ProfileHero, StatCard } from '@/components/profile-header';
 import { BackButton, TopBar } from '@/components/top-bar';
-import { AppText, EmptyState, ErrorState, GhostButton, GradientButton, LoadingState, SectionHeader } from '@/components/ui';
+import { AppText, ErrorState, GhostButton, GradientButton, LoadingState, SectionHeader } from '@/components/ui';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
 import { useCurrentUser } from '@/ctx/auth';
 import { useAppTheme } from '@/ctx/theme';
 import { useQuery } from '@/hooks/use-query';
 import { usersApi } from '@/lib/endpoints';
-import { hasEnded } from '@/lib/format';
 
 export default function UserProfile() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -39,8 +38,6 @@ export default function UserProfile() {
   }
 
   const { profile, events } = query.data;
-  const upcoming = events.filter((e) => !hasEnded(e)).reverse();
-  const past = events.filter(hasEnded).slice(0, 5);
 
   const toggleFollow = async () => {
     const following = profile.isFollowing;
@@ -89,25 +86,14 @@ export default function UserProfile() {
           <StatCard label="Fotos compartidas" value={profile.stats.photosShared} icon="photos" color={colors.secondary} />
         </View>
 
-        {upcoming.length > 0 && (
-          <View style={{ gap: Spacing.three }}>
-            <SectionHeader eyebrow="Organiza" title="Próximos eventos" />
-            {upcoming.map((e) => (
-              <RowEventCard key={e.id} event={e} />
-            ))}
-          </View>
-        )}
-        {past.length > 0 && (
-          <View style={{ gap: Spacing.three }}>
-            <SectionHeader title="Eventos pasados" />
-            {past.map((e) => (
-              <RowEventCard key={e.id} event={e} dimmed />
-            ))}
-          </View>
-        )}
-        {events.length === 0 && (
-          <EmptyState icon="events" title="Sin eventos publicados" message={`@${profile.username} aún no ha organizado eventos.`} />
-        )}
+        <View style={{ gap: Spacing.three }}>
+          <SectionHeader title="Eventos creados" />
+          <OrganizedEvents
+            events={events}
+            emptyTitle="Sin eventos publicados"
+            emptyMessage={`@${profile.username} aún no ha organizado eventos.`}
+          />
+        </View>
       </ScrollView>
     </Shell>
   );
