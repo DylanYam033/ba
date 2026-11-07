@@ -23,11 +23,11 @@ Copia la URL `https://….ngrok-free.dev` que muestra ngrok. Para comprobarla, a
 ## 2. Configurar la app
 
 ```bash
-cd eventspot-app
+cd eventspot-mobile
 npm install
 ```
 
-Crea `eventspot-app/.env.local` a partir de [`.env.example`](.env.example):
+Crea `eventspot-mobile/.env.local` a partir de [`.env.example`](.env.example):
 
 ```
 EXPO_PUBLIC_API_URL=https://tu-subdominio.ngrok-free.dev/api
@@ -66,6 +66,17 @@ Instala una versión optimizada, con el código empaquetado dentro de la app: no
   ```bash
   docker logs -f eventspot_api
   ```
+
+## Verificación de calidad
+
+Antes de generar una versión de prueba, ejecute:
+
+```bash
+npm ci
+npm run verify
+```
+
+Este comando revisa el código con Expo ESLint y comprueba los tipos de TypeScript. No modifica archivos.
 
 ## API key de Google Maps
 
