@@ -103,40 +103,39 @@ export default function Explore() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
+      {/* Same header as the map: search (+ "Ahora", filters, bell), days, categories */}
       <View style={[styles.header, { paddingTop: insets.top + Spacing.two }]}>
-        <View style={styles.searchRow}>
-          <SearchField
-            value={search}
-            onChangeText={setSearch}
-            style={{ flex: 1 }}
-            right={
-              <>
-                {tab === 'today' && <NowToggle value={nowOnly} onChange={setNowOnly} />}
-                <FilterButton count={filterCount} onPress={() => filterSheet.current?.open()} />
-              </>
-            }
-          />
-          <HeaderActions />
-        </View>
+        <SearchField
+          value={search}
+          onChangeText={setSearch}
+          style={styles.search}
+          right={
+            <>
+              {tab === 'today' && <NowToggle value={nowOnly} onChange={setNowOnly} />}
+              <FilterButton count={filterCount} onPress={() => filterSheet.current?.open()} />
+              <HeaderActions />
+            </>
+          }
+        />
+
+        {!searching && (
+          <SegmentedControl options={TABS} value={tab} onChange={changeTab} style={{ marginLeft: Spacing.three }} />
+        )}
+
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>
+          <Chip label="Todo" active={!category} onPress={() => setCategory(undefined)} />
+          {CATEGORY_KEYS.map((key) => (
+            <Chip
+              key={key}
+              label={CATEGORIES[key].label}
+              icon={CATEGORIES[key].icon}
+              iconColor={CATEGORIES[key].color}
+              active={category === key}
+              onPress={() => setCategory(category === key ? undefined : key)}
+            />
+          ))}
+        </ScrollView>
       </View>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips} style={{ flexGrow: 0 }}>
-        <Chip label="Todo" active={!category} onPress={() => setCategory(undefined)} />
-        {CATEGORY_KEYS.map((key) => (
-          <Chip
-            key={key}
-            label={CATEGORIES[key].label}
-            icon={CATEGORIES[key].icon}
-            iconColor={CATEGORIES[key].color}
-            active={category === key}
-            onPress={() => setCategory(category === key ? undefined : key)}
-          />
-        ))}
-      </ScrollView>
-      {!searching && (
-        <View style={styles.tabs}>
-          <SegmentedControl options={TABS} value={tab} onChange={changeTab} />
-        </View>
-      )}
       {feed.loading || !coords ? (
         <LoadingState />
       ) : feed.error && !feed.data ? (
@@ -238,10 +237,10 @@ export default function Explore() {
 }
 
 const styles = StyleSheet.create({
-  header: { paddingHorizontal: Spacing.three, width: '100%', maxWidth: MaxContentWidth, alignSelf: 'center' },
-  searchRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three },
-  chips: { paddingHorizontal: Spacing.three, paddingTop: Spacing.three, gap: Spacing.two },
-  tabs: { paddingHorizontal: Spacing.three, paddingTop: Spacing.three, width: '100%', maxWidth: MaxContentWidth, alignSelf: 'center' },
+  // Mirrors the map's header (styles.top / search / chips in map.tsx).
+  header: { gap: Spacing.two, width: '100%', maxWidth: MaxContentWidth, alignSelf: 'center' },
+  search: { marginHorizontal: Spacing.three },
+  chips: { paddingHorizontal: Spacing.three, gap: Spacing.two, paddingVertical: 4 },
   content: {
     paddingHorizontal: Spacing.three,
     paddingTop: Spacing.four,
