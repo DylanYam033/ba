@@ -17,9 +17,12 @@ const ACCOUNT_TYPES: { value: AccountType; label: string; hint: string; icon: Ic
 ];
 
 export default function SignUp() {
-  const { colors } = useAppTheme();
+  const { colors, scheme } = useAppTheme();
   const { signUp } = useAuth();
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
+  // Dark purple text is hard to read on the selected card in dark mode: use white there.
+  const onActive = scheme === 'dark' ? colors.onPrimary : colors.onPrimaryContainer;
 
   const form = useFormik<SignUpValues>({
     initialValues: { username: '', email: '', password: '', accountType: 'user' },
@@ -61,11 +64,11 @@ export default function SignUp() {
                   styles.type,
                   { backgroundColor: active ? colors.primaryContainer : colors.surfaceHighest },
                 ]}>
-                <Icon name={t.icon} color={active ? colors.onPrimaryContainer : colors.secondary} />
-                <AppText variant="bodyStrong" color={active ? colors.onPrimaryContainer : colors.text}>
+                <Icon name={t.icon} color={active ? onActive : colors.secondary} />
+                <AppText variant="bodyStrong" color={active ? onActive : colors.text}>
                   {t.label}
                 </AppText>
-                <AppText variant="caption" color={active ? colors.onPrimaryContainer : colors.textSecondary}>
+                <AppText variant="caption" color={active ? onActive : colors.textSecondary}>
                   {t.hint}
                 </AppText>
               </Pressable>
@@ -84,11 +87,16 @@ export default function SignUp() {
         <TextField
           label="Contraseña"
           placeholder="Mínimo 8 caracteres"
-          secureTextEntry
+          secureTextEntry={!showPassword}
           autoComplete="new-password"
           maxLength={100}
           onSubmitEditing={submit}
           {...field('password')}
+          right={
+            <Pressable onPress={() => setShowPassword((s) => !s)} style={{ paddingRight: 16 }} accessibilityLabel="Mostrar contraseña">
+              <Icon name={showPassword ? 'eyeOff' : 'eye'} color={colors.textSecondary} />
+            </Pressable>
+          }
         />
         {submitError && (
           <AppText variant="caption" color={colors.error}>
