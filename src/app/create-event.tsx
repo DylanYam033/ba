@@ -19,25 +19,16 @@ import { FALLBACK_COORDS, useUserLocation } from '@/hooks/use-user-location';
 import { CATEGORIES, CATEGORY_KEYS } from '@/lib/categories';
 import { communitiesApi, eventsApi } from '@/lib/endpoints';
 import {
+  DURATIONS,
   EVENT_STEP_FIELDS,
   EVENT_STEP_SCHEMAS,
   eventStart,
   initialEventForm,
+  nextDays,
   type EventFormValues,
 } from '@/lib/event-form';
 
 const STEPS = ['Detalles', 'Ubicación', 'Fecha y entradas'] as const;
-const DURATIONS = [2, 3, 4, 6, 8];
-
-function nextDays(count: number) {
-  return [...Array(count)].map((_, i) => {
-    const d = new Date();
-    d.setHours(0, 0, 0, 0);
-    d.setDate(d.getDate() + i);
-    const label = i === 0 ? 'Hoy' : i === 1 ? 'Mañana' : d.toLocaleDateString('es-CO', { weekday: 'short', day: 'numeric' });
-    return { date: d, label };
-  });
-}
 
 export default function CreateEvent() {
   const { colors } = useAppTheme();

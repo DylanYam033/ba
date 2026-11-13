@@ -3,7 +3,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 
 import { Radius, Spacing } from '@/constants/theme';
 import { useAppTheme } from '@/ctx/theme';
-import type { UploadFile } from '@/lib/api';
+import { mediaSource, type UploadFile } from '@/lib/api';
 import { pickImage } from '@/lib/pick-image';
 
 import { Icon } from './icon';
@@ -12,8 +12,19 @@ import { AppText } from './ui';
 /** Covers render at 16:9 on cards and the event page, so crop to that when picking. */
 const COVER_ASPECT: [number, number] = [16, 9];
 
-/** Optional event cover: tap to pick from the gallery (cropped 16:9), with preview, change and remove. */
-export function CoverPicker({ value, onChange }: { value: UploadFile | null; onChange: (file: UploadFile | null) => void }) {
+/**
+ * Optional event cover: tap to pick from the gallery (cropped 16:9), with preview, change and remove.
+ * `currentUrl` previews the saved cover when editing; removing a new pick goes back to it.
+ */
+export function CoverPicker({
+  value,
+  onChange,
+  currentUrl,
+}: {
+  value: UploadFile | null;
+  onChange: (file: UploadFile | null) => void;
+  currentUrl?: string | null;
+}) {
   const { colors } = useAppTheme();
 
   const pick = async () => {
@@ -21,7 +32,7 @@ export function CoverPicker({ value, onChange }: { value: UploadFile | null; onC
     if (file) onChange(file);
   };
 
-  if (!value) {
+  if (!value && !currentUrl) {
     return (
       <Pressable
         onPress={pick}
@@ -41,7 +52,7 @@ export function CoverPicker({ value, onChange }: { value: UploadFile | null; onC
 
   return (
     <View style={[styles.frame, { backgroundColor: colors.surfaceHigh }]}>
-      <Image source={{ uri: value.uri }} style={StyleSheet.absoluteFill} contentFit="cover" />
+      <Image source={value ? { uri: value.uri } : mediaSource(currentUrl!)} style={StyleSheet.absoluteFill} contentFit="cover" />
       <View style={styles.actions}>
         <Pressable onPress={pick} accessibilityRole="button" style={[styles.action, { backgroundColor: colors.overlay }]}>
           <Icon name="edit" size={16} color={colors.text} />
@@ -49,13 +60,15 @@ export function CoverPicker({ value, onChange }: { value: UploadFile | null; onC
             Cambiar
           </AppText>
         </Pressable>
-        <Pressable
-          onPress={() => onChange(null)}
-          accessibilityRole="button"
-          accessibilityLabel="Quitar portada"
-          style={[styles.action, { backgroundColor: colors.overlay }]}>
-          <Icon name="trash" size={16} color={colors.text} />
-        </Pressable>
+        {value && (
+          <Pressable
+            onPress={() => onChange(null)}
+            accessibilityRole="button"
+            accessibilityLabel="Quitar portada"
+            style={[styles.action, { backgroundColor: colors.overlay }]}>
+            <Icon name="trash" size={16} color={colors.text} />
+          </Pressable>
+        )}
       </View>
     </View>
   );

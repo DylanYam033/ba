@@ -65,7 +65,8 @@ export default function EventDetailScreen() {
   const isOrganizer = event.organizerId === user.id;
   const ended = hasEnded(event);
   const count = liveCount ?? event.currentAttendees;
-  const canUpload = (isGoing || isOrganizer) && event.status !== 'cancelled';
+  // Only the organizer adds photos (and the cover).
+  const canUpload = isOrganizer && event.status !== 'cancelled';
 
   const run = async (kind: 'join' | 'save', fn: () => Promise<unknown>, patch: Partial<typeof query.data>) => {
     setBusy(kind);
@@ -243,7 +244,7 @@ export default function EventDetailScreen() {
             </View>
             {photos.length === 0 ? (
               <AppText variant="caption">
-                {canUpload ? 'Sé el primero en compartir una foto del plan.' : 'Aún no hay fotos. Marca “Voy” para compartir las tuyas.'}
+                {canUpload ? 'Comparte las primeras fotos del plan.' : 'Aún no hay fotos del evento.'}
               </AppText>
             ) : (
               <FlatList
@@ -314,7 +315,10 @@ export default function EventDetailScreen() {
             <Icon name="chevronRight" size={20} color={colors.textMuted} />
           </Pressable>
           {isOrganizer && event.status !== 'cancelled' && !ended && (
-            <GhostButton title="Cancelar evento" icon="close" loading={busy === 'cancel'} onPress={cancelEvent} />
+            <>
+              <GradientButton title="Editar evento" icon="edit" onPress={() => router.push({ pathname: '/edit-event/[id]', params: { id } })} />
+              <GhostButton title="Cancelar evento" icon="close" loading={busy === 'cancel'} onPress={cancelEvent} />
+            </>
           )}
 
           {similar.length > 0 && (

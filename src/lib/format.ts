@@ -57,6 +57,14 @@ export function hasEnded(e: Pick<EventSummary, 'status' | 'endAt'>) {
   return e.status === 'finished' || new Date(e.endAt).getTime() < Date.now();
 }
 
+/** How long after the original start the organizer can still change the time (matches the API). */
+export const TIME_EDIT_GRACE_MS = 15 * 60 * 1000;
+
+/** The time of an event can be changed until 15 min after its configured start. */
+export function canChangeTime(e: Pick<EventSummary, 'startAt'>) {
+  return Date.now() <= new Date(e.startAt).getTime() + TIME_EDIT_GRACE_MS;
+}
+
 /** True when `date` is more than `graceMs` in the past. */
 export function isInPast(date: Date, graceMs = 0) {
   return date.getTime() < Date.now() - graceMs;

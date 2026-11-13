@@ -77,6 +77,7 @@ function RootNavigator({ ready }: { ready: boolean }) {
           <Stack.Screen name="community/new" options={{ presentation: 'modal' }} />
           <Stack.Screen name="event/[id]" />
           <Stack.Screen name="create-event" options={{ presentation: 'modal' }} />
+          <Stack.Screen name="edit-event/[id]" options={{ presentation: 'modal' }} />
           <Stack.Screen name="edit-profile" options={{ presentation: 'modal' }} />
           <Stack.Screen name="notifications" />
           <Stack.Screen name="user/[id]" />

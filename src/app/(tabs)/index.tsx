@@ -71,8 +71,6 @@ export default function Home() {
         <View style={{ gap: Spacing.three }}>
           <SectionHeader
             title="Tus comunidades"
-            eyebrow={communities.data?.length ? String(communities.data.length) : undefined}
-            eyebrowColor={colors.primary}
             action="Ver todas"
             onAction={() => router.push('/communities')}
           />

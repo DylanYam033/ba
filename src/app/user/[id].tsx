@@ -9,6 +9,7 @@ import { AppText, ErrorState, GhostButton, GradientButton, LoadingState, Section
 import { MaxContentWidth, Spacing } from '@/constants/theme';
 import { useCurrentUser } from '@/ctx/auth';
 import { useAppTheme } from '@/ctx/theme';
+import { useOrganizedEvents } from '@/hooks/use-organized-events';
 import { useQuery } from '@/hooks/use-query';
 import { usersApi } from '@/lib/endpoints';
 
@@ -20,15 +21,11 @@ export default function UserProfile() {
   const [actionError, setActionError] = useState<string | null>(null);
   const isMe = id === me.id;
 
-  const query = useQuery(
-    isMe
-      ? null
-      : async () => {
-          const [profile, events] = await Promise.all([usersApi.get(id), usersApi.events(id)]);
-          return { profile, events };
-        },
-    [id],
-  );
+  const query = useQuery(isMe ? null : async () => ({ profile: await usersApi.get(id) }), [id]);
+  const events = useOrganizedEvents(id, !isMe);
+  const refresh = async () => {
+    await Promise.all([query.refresh(), events.refresh()]);
+  };
 
   if (isMe) return <Redirect href="/profile" />;
 
@@ -37,7 +34,7 @@ export default function UserProfile() {
     return <Shell><ErrorState error={query.error ?? new Error('Usuario no encontrado')} onRetry={query.refresh} /></Shell>;
   }
 
-  const { profile, events } = query.data;
+  const { profile } = query.data;
 
   const toggleFollow = async () => {
     const following = profile.isFollowing;
@@ -67,7 +64,7 @@ export default function UserProfile() {
     <Shell>
       <ScrollView
         contentContainerStyle={styles.content}
-        refreshControl={<RefreshControl refreshing={query.refreshing} onRefresh={query.refresh} tintColor={colors.secondary} />}>
+        refreshControl={<RefreshControl refreshing={query.refreshing || events.refreshing} onRefresh={refresh} tintColor={colors.secondary} />}>
         <ProfileHero user={profile} stats={profile.stats} emptyBio="Sin bio todavía." />
 
         {profile.isFollowing ? (
@@ -88,11 +85,17 @@ export default function UserProfile() {
 
         <View style={{ gap: Spacing.three }}>
           <SectionHeader title="Eventos creados" />
-          <OrganizedEvents
-            events={events}
-            emptyTitle="Sin eventos publicados"
-            emptyMessage={`@${profile.username} aún no ha organizado eventos.`}
-          />
+          {!events.loading && (
+            <OrganizedEvents
+              events={events.events}
+              hasMore={events.hasMore}
+              loadingMore={events.loadingMore}
+              onLoadMore={events.loadMore}
+              moreError={events.moreError}
+              emptyTitle="Sin eventos publicados"
+              emptyMessage={`@${profile.username} aún no ha organizado eventos.`}
+            />
+          )}
         </View>
       </ScrollView>
     </Shell>

@@ -10,6 +10,7 @@ import { EmptyState, GhostButton, GradientButton, IconButton, SectionHeader } fr
 import { MaxContentWidth, Spacing } from '@/constants/theme';
 import { useAuth, useCurrentUser } from '@/ctx/auth';
 import { useAppTheme } from '@/ctx/theme';
+import { useOrganizedEvents } from '@/hooks/use-organized-events';
 import { useQuery } from '@/hooks/use-query';
 import { communitiesApi, usersApi } from '@/lib/endpoints';
 
@@ -20,21 +21,24 @@ export default function Profile() {
   const isBusiness = user.accountType === 'business';
 
   const data = useQuery(async () => {
-    const [stats, saved, created, communities] = await Promise.all([
+    const [stats, saved, communities] = await Promise.all([
       usersApi.stats(user.id),
       usersApi.myEvents('saved'),
-      usersApi.events(user.id),
       communitiesApi.mine(),
     ]);
-    return { stats, saved, created, communities };
+    return { stats, saved, communities };
   }, [user.id]);
+  const created = useOrganizedEvents(user.id);
+  const refresh = async () => {
+    await Promise.all([data.refresh(), created.refresh()]);
+  };
 
   const confirmSignOut = () => {
     if (Platform.OS === 'web') {
       signOut();
       return;
     }
-    Alert.alert('Cerrar sesión', '¿Seguro que quieres salir?', [
+    Alert.alert('Cerrar sesiÃ³n', 'Â¿Seguro que quieres salir?', [
       { text: 'Cancelar', style: 'cancel' },
       { text: 'Salir', style: 'destructive', onPress: signOut },
     ]);
@@ -42,7 +46,6 @@ export default function Profile() {
 
   const stats = data.data?.stats;
   const saved = data.data?.saved ?? [];
-  const created = data.data?.created ?? [];
   // Owned first, then the ones you joined.
   const communities = [...(data.data?.communities ?? [])].sort(
     (a, b) => Number(b.ownerId === user.id) - Number(a.ownerId === user.id),
@@ -53,13 +56,13 @@ export default function Profile() {
       <TopBar left={<BackButton />} right={<NotificationsBell />} />
       <ScrollView
         contentContainerStyle={styles.content}
-        refreshControl={<RefreshControl refreshing={data.refreshing} onRefresh={data.refresh} tintColor={colors.secondary} />}>
+        refreshControl={<RefreshControl refreshing={data.refreshing || created.refreshing} onRefresh={refresh} tintColor={colors.secondary} />}>
         <View style={styles.actions}>
           <IconButton icon={scheme === 'dark' ? 'lightMode' : 'darkMode'} label="Cambiar tema" onPress={toggle} color={colors.secondary} />
           <IconButton icon="settings" label="Editar perfil" onPress={() => router.push('/edit-profile')} />
         </View>
 
-        <ProfileHero user={user} stats={stats} emptyBio="Aún no tienes bio. Cuéntale a la ciudad qué te mueve." />
+        <ProfileHero user={user} stats={stats} emptyBio="AÃºn no tienes bio. CuÃ©ntale a la ciudad quÃ© te mueve." />
 
         {isBusiness && <GradientButton title="Crear evento" icon="add" onPress={() => router.push('/create-event')} />}
 
@@ -78,11 +81,16 @@ export default function Profile() {
 
         <View style={{ gap: Spacing.three }}>
           <SectionHeader title="Mis eventos creados" />
-          {data.loading ? null : (
+          {created.loading ? null : (
             <OrganizedEvents
-              events={created}
-              emptyTitle="Aún no has creado eventos"
-              emptyMessage="Publica tu primer evento y aparecerá aquí."
+              events={created.events}
+              editable
+              hasMore={created.hasMore}
+              loadingMore={created.loadingMore}
+              onLoadMore={created.loadMore}
+              moreError={created.moreError}
+              emptyTitle="AÃºn no has creado eventos"
+              emptyMessage="Publica tu primer evento y aparecerÃ¡ aquÃ­."
               emptyAction="Crear evento"
               onEmptyAction={() => router.push('/create-event')}
             />
@@ -98,7 +106,7 @@ export default function Profile() {
           )}
         </View>
 
-        <GhostButton title="Cerrar sesión" icon="logout" onPress={confirmSignOut} />
+        <GhostButton title="Cerrar sesiÃ³n" icon="logout" onPress={confirmSignOut} />
       </ScrollView>
     </View>
   );

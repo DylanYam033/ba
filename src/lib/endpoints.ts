@@ -77,7 +77,13 @@ export const eventsApi = {
     api<MapPin[]>('/events/map-pins', { query: { lat: c.lat, lng: c.lng, radiusKm, category, from: window?.from, to: window?.to } }),
   get: (id: string) => api<EventDetail>(`/events/${id}`),
   create: (input: CreateEventInput) => api<EventDetail>('/events', { method: 'POST', body: input }),
-  update: (id: string, body: Partial<Pick<EventSummary, 'status' | 'title' | 'description'>>) =>
+  /** Organizer only; the API rejects time changes more than 15 min after the original start. */
+  update: (
+    id: string,
+    body: Partial<
+      Pick<EventSummary, 'status' | 'title' | 'description' | 'category' | 'startAt' | 'endAt' | 'isFree' | 'price' | 'maxCapacity'>
+    >,
+  ) =>
     api<EventDetail>(`/events/${id}`, { method: 'PATCH', body }),
   /** Soft-cancels the event and notifies attendees (organizer only). */
   cancel: (id: string) => api<void>(`/events/${id}`, { method: 'DELETE' }),
@@ -104,7 +110,9 @@ export const usersApi = {
   uploadAvatar: (file: UploadFile) => upload<User>('/users/me/avatar', file),
   get: (id: string) => api<PublicUser>(`/users/${id}`),
   /** Published events the user organizes, newest start first. */
-  events: (id: string) => api<EventWithLocation[]>(`/users/${id}/events`),
+  /** Organized events: live/upcoming first (soonest first), then past (latest first). */
+  events: (id: string, page = 1, limit = 5) =>
+    api<Paginated<EventWithLocation>>(`/users/${id}/events`, { query: { page, limit } }),
   follow: (id: string) => api<void>(`/users/${id}/follow`, { method: 'POST' }),
   unfollow: (id: string) => api<void>(`/users/${id}/follow`, { method: 'DELETE' }),
   followers: (id: string, page = 1) => api<Paginated<UserRef>>(`/users/${id}/followers`, { query: { page, limit: 30 } }),
